@@ -1,6 +1,8 @@
 import { getPurchaseOrders, getSuppliersForSelect, getProductsForSelect } from "./actions";
 import { PurchaseClient } from "./client";
 
+export const dynamic = "force-dynamic";
+
 export default async function PurchasesPage() {
   const [purchaseOrders, suppliers, products] = await Promise.all([
     getPurchaseOrders(),

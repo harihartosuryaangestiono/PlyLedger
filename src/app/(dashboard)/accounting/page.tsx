@@ -2,6 +2,8 @@ import { getJournalEntries, getAuditLogs } from "./actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const dynamic = "force-dynamic";
+
 export default async function AccountingPage() {
   const [journals, audits] = await Promise.all([
     getJournalEntries(),

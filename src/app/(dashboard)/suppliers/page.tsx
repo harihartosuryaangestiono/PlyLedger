@@ -1,6 +1,8 @@
 import { getSuppliers } from "./actions";
 import { SupplierClient } from "./client";
 
+export const dynamic = "force-dynamic";
+
 export default async function SuppliersPage() {
   const suppliers = await getSuppliers();
 

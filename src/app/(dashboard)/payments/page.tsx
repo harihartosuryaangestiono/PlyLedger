@@ -1,6 +1,8 @@
 import { getInvoices } from "./actions";
 import { PaymentClient } from "./client";
 
+export const dynamic = "force-dynamic";
+
 export default async function PaymentsPage() {
   const invoices = await getInvoices();
 

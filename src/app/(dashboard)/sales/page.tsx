@@ -1,6 +1,8 @@
 import { getSalesOrders, getCustomersForSelect, getProductsForSelect } from "./actions";
 import { SalesClient } from "./client";
 
+export const dynamic = "force-dynamic";
+
 export default async function SalesPage() {
   const [salesOrders, customers, products] = await Promise.all([
     getSalesOrders(),
