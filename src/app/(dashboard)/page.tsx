@@ -10,8 +10,8 @@ export default async function DashboardPage() {
     include: { payments: true }
   });
   
-  const outstandingReceivables = receivables.reduce((sum, inv) => {
-    const paid = inv.payments.reduce((s, p) => s + p.amount, 0);
+  const outstandingReceivables = receivables.reduce((sum: number, inv: any) => {
+    const paid = inv.payments.reduce((s: number, p: any) => s + p.amount, 0);
     return sum + (inv.amount - paid);
   }, 0);
 
@@ -21,8 +21,8 @@ export default async function DashboardPage() {
     include: { payments: true }
   });
 
-  const outstandingPayables = payables.reduce((sum, inv) => {
-    const paid = inv.payments.reduce((s, p) => s + p.amount, 0);
+  const outstandingPayables = payables.reduce((sum: number, inv: any) => {
+    const paid = inv.payments.reduce((s: number, p: any) => s + p.amount, 0);
     return sum + (inv.amount - paid);
   }, 0);
 
@@ -32,12 +32,12 @@ export default async function DashboardPage() {
   });
   
   const totalRevenue = allPayments
-    .filter(p => p.invoice.type === "RECEIVABLE")
-    .reduce((sum, p) => sum + p.amount, 0);
+    .filter((p: any) => p.invoice.type === "RECEIVABLE")
+    .reduce((sum: number, p: any) => sum + p.amount, 0);
     
   const totalCost = allPayments
-    .filter(p => p.invoice.type === "PAYABLE")
-    .reduce((sum, p) => sum + p.amount, 0);
+    .filter((p: any) => p.invoice.type === "PAYABLE")
+    .reduce((sum: number, p: any) => sum + p.amount, 0);
     
   const netProfit = totalRevenue - totalCost;
 
@@ -54,12 +54,12 @@ export default async function DashboardPage() {
     
     // Calculate rev/cost for this specific month
     const monthRev = allPayments
-      .filter(p => p.invoice.type === "RECEIVABLE" && new Date(p.paymentDate).getMonth() === d.getMonth() && new Date(p.paymentDate).getFullYear() === d.getFullYear())
-      .reduce((sum, p) => sum + p.amount, 0);
+      .filter((p: any) => p.invoice.type === "RECEIVABLE" && new Date(p.paymentDate).getMonth() === d.getMonth() && new Date(p.paymentDate).getFullYear() === d.getFullYear())
+      .reduce((sum: number, p: any) => sum + p.amount, 0);
       
     const monthCost = allPayments
-      .filter(p => p.invoice.type === "PAYABLE" && new Date(p.paymentDate).getMonth() === d.getMonth() && new Date(p.paymentDate).getFullYear() === d.getFullYear())
-      .reduce((sum, p) => sum + p.amount, 0);
+      .filter((p: any) => p.invoice.type === "PAYABLE" && new Date(p.paymentDate).getMonth() === d.getMonth() && new Date(p.paymentDate).getFullYear() === d.getFullYear())
+      .reduce((sum: number, p: any) => sum + p.amount, 0);
 
     chartData.push({
       month: months[d.getMonth()],
@@ -79,7 +79,7 @@ export default async function DashboardPage() {
     }
   });
 
-  const recentTransactions = recentInvoices.map(inv => {
+  const recentTransactions = recentInvoices.map((inv: any) => {
     let party = "Unknown";
     if (inv.type === "RECEIVABLE" && inv.salesOrder) {
       party = inv.salesOrder.customer.name;
