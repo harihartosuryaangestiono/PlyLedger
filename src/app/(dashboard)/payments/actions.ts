@@ -56,7 +56,7 @@ export async function recordPayment(data: {
     }
 
     // Atomically create payment, update invoice, write journals, write audit log
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // 1. Create Payment
       const payment = await tx.payment.create({
         data: {
