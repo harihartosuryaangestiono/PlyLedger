@@ -39,7 +39,7 @@ export default async function AccountingPage() {
                     <TableCell>{new Date(j.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>{j.account}</TableCell>
                     <TableCell className={j.type === "CREDIT" ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>{j.type}</TableCell>
-                    <TableCell className="text-right">{j.currency} {j.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">Rp {j.amount.toLocaleString("id-ID")}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

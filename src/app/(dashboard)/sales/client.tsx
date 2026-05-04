@@ -100,8 +100,7 @@ export function SalesClient({ initialOrders, customers, products }: any) {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="currency">Currency</Label>
-                      <Input id="currency" name="currency" defaultValue="USD" required />
+                      <Input id="currency" name="currency" defaultValue="IDR" readOnly className="bg-slate-50 text-slate-500 hidden" />
                     </div>
                     <div className="space-y-2">
                       <Label>Payment Terms</Label>
@@ -151,7 +150,7 @@ export function SalesClient({ initialOrders, customers, products }: any) {
                   <div className="flex justify-end pt-2 border-t border-slate-200 mt-4">
                     <div className="text-right">
                       <span className="text-sm text-slate-500 mr-4">Calculated Total</span>
-                      <span className="text-lg font-bold text-slate-900">${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span className="text-lg font-bold text-slate-900">Rp {totalAmount.toLocaleString("id-ID")}</span>
                     </div>
                   </div>
                 </div>
@@ -190,7 +189,7 @@ export function SalesClient({ initialOrders, customers, products }: any) {
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{so.customer.name}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{so.paymentTerms}</TableCell>
                   <TableCell className="text-right font-medium text-slate-900 py-3.5 border-b border-slate-100">
-                    {so.currency} {so.totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    Rp {so.totalAmount.toLocaleString("id-ID")}
                   </TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(so.status)}</TableCell>
                 </TableRow>

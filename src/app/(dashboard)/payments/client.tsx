@@ -70,11 +70,11 @@ export function PaymentClient({ initialInvoices }: any) {
             <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
               <div className="flex justify-between items-center border-b pb-2">
                 <span className="text-sm font-medium text-slate-500">Total Invoice Amount</span>
-                <span className="text-sm font-bold">{selectedInvoice?.currency} {selectedInvoice?.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                <span className="text-sm font-bold">Rp {selectedInvoice?.amount.toLocaleString("id-ID")}</span>
               </div>
               
               <div className="space-y-2">
-                <Label>Payment Amount ({selectedInvoice?.currency})</Label>
+                <Label>Payment Amount (Rp)</Label>
                 <Input 
                   name="amount" 
                   type="number" 
@@ -83,7 +83,7 @@ export function PaymentClient({ initialInvoices }: any) {
                   required 
                 />
                 <p className="text-xs text-muted-foreground">
-                  Remaining balance: {selectedInvoice?.currency} {(selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                  Remaining balance: Rp {(selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0).toLocaleString("id-ID")}
                 </p>
               </div>
               <div className="space-y-2">
@@ -138,10 +138,10 @@ export function PaymentClient({ initialInvoices }: any) {
                       {inv.purchaseOrder ? inv.purchaseOrder.supplier.name : inv.salesOrder?.customer?.name}
                     </TableCell>
                     <TableCell className="text-right font-medium text-slate-900 py-3.5 border-b border-slate-100">
-                      {inv.currency} {inv.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      Rp {inv.amount.toLocaleString("id-ID")}
                     </TableCell>
                     <TableCell className="text-right text-green-600 font-medium py-3.5 border-b border-slate-100">
-                      {paid.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      Rp {paid.toLocaleString("id-ID")}
                     </TableCell>
                     <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(inv.status)}</TableCell>
                     <TableCell className="text-right py-3.5 border-b border-slate-100">

@@ -33,9 +33,9 @@ export function DashboardClient({
           <CardContent className="p-5">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-slate-500">Total Revenue</span>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">
-                ${metrics.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 0})}
-              </span>
+              <div className="text-2xl font-bold tracking-tight text-slate-900">
+                Rp {metrics.totalRevenue.toLocaleString("id-ID")}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -45,9 +45,9 @@ export function DashboardClient({
           <CardContent className="p-5">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-slate-500">Cost of Goods Sold</span>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">
-                ${metrics.totalCost.toLocaleString(undefined, {minimumFractionDigits: 0})}
-              </span>
+              <div className="text-2xl font-bold tracking-tight text-slate-900">
+                Rp {metrics.totalCost.toLocaleString("id-ID")}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -59,9 +59,9 @@ export function DashboardClient({
             <div className="flex flex-col gap-1 h-full justify-center">
               <span className="text-sm font-medium text-slate-500">Net Profit (Current)</span>
               <div className="flex items-baseline gap-3">
-                <span className="text-4xl font-extrabold tracking-tight text-slate-900">
-                  ${metrics.netProfit.toLocaleString(undefined, {minimumFractionDigits: 0})}
-                </span>
+                <div className="text-4xl font-extrabold tracking-tight text-slate-900">
+                  Rp {metrics.netProfit.toLocaleString("id-ID")}
+                </div>
                 {metrics.netProfit > 0 && (
                   <span className="text-sm font-medium text-green-600 flex items-center">
                     ↑ Positive
@@ -77,9 +77,9 @@ export function DashboardClient({
           <CardContent className="p-5">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-slate-500">Outstanding Invoices</span>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">
-                ${metrics.outstandingReceivables.toLocaleString(undefined, {minimumFractionDigits: 0})}
-              </span>
+              <div className="text-2xl font-bold tracking-tight text-slate-900">
+                Rp {metrics.outstandingReceivables.toLocaleString("id-ID")}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -107,11 +107,11 @@ export function DashboardClient({
                   axisLine={false} 
                   tickLine={false} 
                   tick={{fill: '#64748B', fontSize: 12, fontWeight: 500}} 
-                  tickFormatter={(value) => `$${value/1000}k`}
+                  tickFormatter={(value) => `Rp${value/1000}k`}
                   width={60}
                 />
                 <Tooltip 
-                  formatter={(value: any) => [`$${Number(value || 0).toLocaleString()}`, undefined]}
+                  formatter={(value: any) => [`Rp ${Number(value || 0).toLocaleString("id-ID")}`, undefined]}
                   contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px', fontWeight: 500 }}
                   labelStyle={{ color: '#64748B', marginBottom: '4px' }}
                 />
@@ -166,7 +166,7 @@ export function DashboardClient({
                   <TableCell className="text-slate-600 text-sm py-3.5 border-b border-slate-100">{tx.party}</TableCell>
                   <TableCell className="text-slate-600 text-sm py-3.5 border-b border-slate-100">{tx.type}</TableCell>
                   <TableCell className="text-right font-medium text-sm text-slate-900 py-3.5 border-b border-slate-100">
-                    ${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    Rp {tx.amount.toLocaleString("id-ID")}
                   </TableCell>
                   <TableCell className="text-center py-3.5 border-b border-slate-100">
                     <Badge variant={
