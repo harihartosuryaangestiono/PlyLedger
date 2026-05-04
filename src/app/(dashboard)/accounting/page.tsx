@@ -34,7 +34,7 @@ export default async function AccountingPage() {
                 {journals.length === 0 && (
                   <TableRow><TableCell colSpan={4} className="text-center">No entries found.</TableCell></TableRow>
                 )}
-                {journals.map((j) => (
+                {journals.map((j: any) => (
                   <TableRow key={j.id}>
                     <TableCell>{new Date(j.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>{j.account}</TableCell>
@@ -65,7 +65,7 @@ export default async function AccountingPage() {
                 {audits.length === 0 && (
                   <TableRow><TableCell colSpan={4} className="text-center">No audit logs found.</TableCell></TableRow>
                 )}
-                {audits.map((a) => (
+                {audits.map((a: any) => (
                   <TableRow key={a.id}>
                     <TableCell className="text-xs text-muted-foreground">{new Date(a.createdAt).toLocaleString()}</TableCell>
                     <TableCell>{a.user.name}</TableCell>
