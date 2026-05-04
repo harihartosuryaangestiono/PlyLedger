@@ -43,7 +43,7 @@ export async function createSalesOrder(data: {
 }) {
   try {
     // Calculate total amount from items
-    const itemsCost = data.items.reduce((sum, item) => sum + (item.quantity * item.sellingPrice), 0);
+    const itemsCost = data.items.reduce((sum: number, item: any) => sum + (item.quantity * item.sellingPrice), 0);
 
     const so = await prisma.salesOrder.create({
       data: {

@@ -31,7 +31,7 @@ export function PurchaseClient({ initialOrders, suppliers, products }: any) {
     }
   };
 
-  const totalCost = items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+  const totalCost = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

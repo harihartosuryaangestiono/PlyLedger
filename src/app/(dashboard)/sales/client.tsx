@@ -32,7 +32,7 @@ export function SalesClient({ initialOrders, customers, products }: any) {
     }
   };
 
-  const totalAmount = items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.sellingPrice)), 0);
+  const totalAmount = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.sellingPrice)), 0);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

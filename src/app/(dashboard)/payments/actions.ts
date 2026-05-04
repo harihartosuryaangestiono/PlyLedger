@@ -34,7 +34,7 @@ export async function recordPayment(data: {
     if (!invoice) throw new Error("Invoice not found");
 
     // Calculate new status
-    const totalPaidSoFar = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPaidSoFar = invoice.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
     const newTotalPaid = totalPaidSoFar + data.amount;
     
     let newStatus: "UNPAID" | "PARTIALLY_PAID" | "PAID" = "PARTIALLY_PAID";
