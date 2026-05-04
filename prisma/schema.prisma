@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==============================
+// User & Auth
+// ==============================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(SALES)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  auditLogs AuditLog[]
+}
+
+enum Role {
+  ADMIN
+  FINANCE
+  SALES
+}
+
+// ==============================
+// Master Data
+// ==============================
+
+model Supplier {
+  id             String          @id @default(uuid())
+  name           String
+  contactPerson  String?
+  email          String?
+  phone          String?
+  address        String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  purchaseOrders PurchaseOrder[]
+}
+
+model Customer {
+  id            String       @id @default(uuid())
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  salesOrders   SalesOrder[]
+}
+
+model Product {
+  id            String         @id @default(uuid())
+  name          String
+  type          String         // e.g., MR, WBP, Film Faced
+  thickness     String         // e.g., 12mm, 18mm
+  grade         String         // e.g., A/B/C
+  size          String         // e.g., 1220x2440
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  purchaseItems PurchaseItem[]
+  salesItems    SalesItem[]
+}
+
+// ==============================
+// Trading: Purchase
+// ==============================
+
+model PurchaseOrder {
+  id                 String           @id @default(uuid())
+  poNumber           String           @unique
+  supplierId         String
+  supplier           Supplier         @relation(fields: [supplierId], references: [id])
+  currency           String           @default("USD")
+  exchangeRateId     String?
+  exchangeRate       ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
+  containerType      String?          // e.g., 20ft, 40ft
+  estimatedShipDate  DateTime?
+  freightCost        Float            @default(0)
+  handlingCost       Float            @default(0)
+  documentationCost  Float            @default(0)
+  totalCost          Float            @default(0)
+  status             POStatus         @default(DRAFT)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  items              PurchaseItem[]
+  shipments          Shipment[]       @relation("POShipments")
+  invoices           Invoice[]
+}
+
+enum POStatus {
+  DRAFT
+  CONFIRMED
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+model PurchaseItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Float
+  unit            String        // e.g., cbm, sheets
+  unitPrice       Float
+  totalPrice      Float
+}
+
+// ==============================
+// Trading: Sales
+// ==============================
+
+model SalesOrder {
+  id              String           @id @default(uuid())
+  soNumber        String           @unique
+  customerId      String
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  currency        String           @default("USD")
+  exchangeRateId  String?
+  exchangeRate    ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
+  paymentTerms    PaymentTerm      @default(CASH)
+  totalAmount     Float            @default(0)
+  status          SOStatus         @default(DRAFT)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  items           SalesItem[]
+  shipments       Shipment[]       @relation("SOShipments")
+  invoices        Invoice[]
+}
+
+enum PaymentTerm {
+  CASH
+  INSTALLMENT
+  LC
+}
+
+enum SOStatus {
+  DRAFT
+  CONFIRMED
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+model SalesItem {
+  id           String     @id @default(uuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  quantity     Float
+  unit         String
+  sellingPrice Float
+  totalPrice   Float
+}
+
+// ==============================
+// Trading: Shipments
+// ==============================
+
+model Shipment {
+  id              String          @id @default(uuid())
+  containerNumber String?
+  billOfLading    String?
+  etd             DateTime?
+  eta             DateTime?
+  originPort      String?
+  destinationPort String?
+  status          ShipmentStatus  @default(PENDING)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  purchaseOrders  PurchaseOrder[] @relation("POShipments")
+  salesOrders     SalesOrder[]    @relation("SOShipments")
+}
+
+enum ShipmentStatus {
+  PENDING
+  IN_TRANSIT
+  ARRIVED
+  DELIVERED
+}
+
+// ==============================
+// Financials
+// ==============================
+
+model Invoice {
+  id              String         @id @default(uuid())
+  invoiceNumber   String         @unique
+  type            InvoiceType
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  salesOrderId    String?
+  salesOrder      SalesOrder?    @relation(fields: [salesOrderId], references: [id])
+  amount          Float
+  currency        String
+  status          InvoiceStatus  @default(UNPAID)
+  dueDate         DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  payments        Payment[]
+}
+
+enum InvoiceType {
+  PAYABLE    // To Supplier
+  RECEIVABLE // From Customer
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+model Payment {
+  id             String                @id @default(uuid())
+  invoiceId      String
+  invoice        Invoice               @relation(fields: [invoiceId], references: [id])
+  amount         Float
+  currency       String
+  exchangeRateId String?
+  exchangeRate   ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
+  paymentDate    DateTime              @default(now())
+  method         String?
+  reference      String?
+  createdAt      DateTime              @default(now())
+}
+
+model JournalEntry {
+  id             String                @id @default(uuid())
+  date           DateTime              @default(now())
+  description    String
+  account        String
+  type           JournalType
+  amount         Float
+  currency       String
+  exchangeRateId String?
+  exchangeRate   ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
+  referenceId    String?               // Optional link to Payment, Invoice, PO, SO
+  referenceType  String?
+  createdAt      DateTime              @default(now())
+  // Cannot be updated once created to ensure immutability
+}
+
+enum JournalType {
+  DEBIT
+  CREDIT
+}
+
+model ExchangeRateSnapshot {
+  id             String         @id @default(uuid())
+  currencyFrom   String
+  currencyTo     String
+  rate           Float
+  date           DateTime       @default(now())
+  purchaseOrders PurchaseOrder[]
+  salesOrders    SalesOrder[]
+  payments       Payment[]
+  journalEntries JournalEntry[]
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   // e.g., "CREATE_PAYMENT", "APPROVE_PO"
+  entity      String   // e.g., "Payment", "PurchaseOrder"
+  entityId    String
+  details     String   // JSON string of changes
+  createdAt   DateTime @default(now())
+}
