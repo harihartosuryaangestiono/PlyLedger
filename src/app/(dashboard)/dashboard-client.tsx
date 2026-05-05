@@ -71,7 +71,7 @@ export function DashboardClient({
               </div>
               
               <div className="mt-4 sm:mt-6">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight truncate">
+                <div className="text-[28px] sm:text-4xl lg:text-5xl font-bold tracking-tight truncate">
                   {formatCurrency(Math.abs(metrics.netProfit))}
                 </div>
                 
@@ -171,12 +171,12 @@ export function DashboardClient({
         
         {/* Revenue vs Cost */}
         <Card className={`border-slate-200 dark:border-slate-800 shadow-sm dark:bg-slate-900 rounded-2xl ${isSales ? 'col-span-1' : 'col-span-1 xl:col-span-2'}`}>
-          <CardHeader className="pb-2 pt-6 px-6">
+          <CardHeader className="pb-2 pt-6 px-4 sm:px-6">
             <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-50">Revenue {isSales ? '' : 'vs Cost'}</CardTitle>
           </CardHeader>
-          <CardContent className="pl-0 pb-6 pr-6 pt-4 h-[340px]">
+          <CardContent className="pl-0 pb-6 pr-4 sm:pr-6 pt-4 h-[280px] sm:h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
@@ -190,8 +190,8 @@ export function DashboardClient({
                   )}
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:stroke-slate-800" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} tickFormatter={formatCompactCurrency} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 11}} dy={10} minTickGap={15} />
+                <YAxis width={45} axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 11}} tickFormatter={formatCompactCurrency} />
                 <Tooltip 
                   formatter={(value: any) => [formatCurrency(value), undefined]}
                   contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--card, #fff)' }}
@@ -208,15 +208,15 @@ export function DashboardClient({
         {/* Profit Trend (Hidden for SALES) */}
         {!isSales && (
           <Card className="col-span-1 border-slate-200 dark:border-slate-800 shadow-sm dark:bg-slate-900 rounded-2xl flex flex-col">
-            <CardHeader className="pb-2 pt-6 px-6">
+            <CardHeader className="pb-2 pt-6 px-4 sm:px-6">
               <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-50">Profit / Loss</CardTitle>
             </CardHeader>
-            <CardContent className="pl-0 pb-6 pr-6 pt-4 flex-1 h-[340px]">
+            <CardContent className="pl-0 pb-6 pr-4 sm:pr-6 pt-4 flex-1 h-[280px] sm:h-[340px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:stroke-slate-800" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} tickFormatter={formatCompactCurrency} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 11}} dy={10} minTickGap={15} />
+                  <YAxis width={45} axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 11}} tickFormatter={formatCompactCurrency} />
                   <Tooltip 
                     formatter={(value: any) => [formatCurrency(value), "Net Profit"]}
                     cursor={{fill: 'var(--muted, #f1f5f9)', opacity: 0.5}}
@@ -238,15 +238,15 @@ export function DashboardClient({
       {/* Cashflow Chart (Hidden for SALES) */}
       {!isSales && (
         <Card className="border-slate-200 dark:border-slate-800 shadow-sm dark:bg-slate-900 rounded-2xl">
-          <CardHeader className="pb-2 pt-6 px-6">
+          <CardHeader className="pb-2 pt-6 px-4 sm:px-6">
             <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-50">Cashflow Movement</CardTitle>
           </CardHeader>
-          <CardContent className="pl-0 pb-6 pr-6 pt-4 h-[320px]">
+          <CardContent className="pl-0 pb-6 pr-4 sm:pr-6 pt-4 h-[280px] sm:h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+              <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:stroke-slate-800" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} tickFormatter={formatCompactCurrency} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 11}} dy={10} minTickGap={15} />
+                <YAxis width={45} axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 11}} tickFormatter={formatCompactCurrency} />
                 <Tooltip 
                   formatter={(value: any) => [formatCurrency(value), undefined]}
                   contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--card, #fff)' }}
@@ -266,22 +266,22 @@ export function DashboardClient({
         
         {/* Recent Transactions */}
         <Card className="border-slate-200 dark:border-slate-800 shadow-sm dark:bg-slate-900 col-span-1 lg:col-span-1 flex flex-col rounded-2xl overflow-hidden">
-          <CardHeader className="pb-3 pt-5 px-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
+          <CardHeader className="pb-3 pt-4 sm:pt-5 px-4 sm:px-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
             <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-50 uppercase tracking-wider flex items-center gap-2">
               <Clock className="w-4 h-4 text-slate-500 dark:text-slate-400"/> Recent Transactions
             </CardTitle>
           </CardHeader>
-          <div className="flex-1 overflow-auto max-h-[400px]">
+          <div className="flex-1 overflow-auto max-h-[350px] sm:max-h-[400px]">
             <Table>
               <TableBody>
                 {recentTransactions.map((tx, idx) => (
                   <TableRow key={tx.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <TableCell className="py-4 px-5">
-                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-sm">{tx.party}</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{tx.date} &bull; {tx.id}</div>
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-5">
+                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-xs sm:text-sm">{tx.party}</div>
+                      <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1">{tx.date} &bull; {tx.id}</div>
                     </TableCell>
-                    <TableCell className="py-4 px-5 text-right">
-                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-sm">{formatCurrency(tx.amount)}</div>
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-5 text-right">
+                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-xs sm:text-sm">{formatCurrency(tx.amount)}</div>
                       <div className="mt-1.5 flex justify-end">
                         <Badge variant={tx.type === 'Sale' ? 'outline' : 'secondary'} className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${tx.type === 'Sale' ? 'border-emerald-200 text-emerald-700 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
                           {tx.type}
@@ -300,28 +300,28 @@ export function DashboardClient({
 
         {/* Pending Payments */}
         <Card className="border-slate-200 dark:border-slate-800 shadow-sm dark:bg-slate-900 col-span-1 lg:col-span-1 flex flex-col rounded-2xl overflow-hidden">
-          <CardHeader className="pb-3 pt-5 px-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
+          <CardHeader className="pb-3 pt-4 sm:pt-5 px-4 sm:px-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
             <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-50 uppercase tracking-wider flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-500"/> Pending Payments
             </CardTitle>
           </CardHeader>
-          <div className="flex-1 overflow-auto max-h-[400px]">
+          <div className="flex-1 overflow-auto max-h-[350px] sm:max-h-[400px]">
             <Table>
               <TableBody>
                 {pendingPayments.map((p, idx) => (
                   <TableRow key={p.id} className={`border-b border-slate-100 dark:border-slate-800/50 transition-colors ${p.isOverdue ? 'bg-red-50/50 hover:bg-red-50 dark:bg-red-950/20 dark:hover:bg-red-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-                    <TableCell className="py-4 px-5">
-                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-sm flex items-center gap-1.5">
-                        {p.type === 'PAYABLE' ? <ArrowUpRight className="w-3.5 h-3.5 text-rose-500"/> : <ArrowDownRight className="w-3.5 h-3.5 text-emerald-500"/>}
-                        {p.party}
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-5">
+                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-xs sm:text-sm flex items-center gap-1.5">
+                        {p.type === 'PAYABLE' ? <ArrowUpRight className="w-3.5 h-3.5 text-rose-500 shrink-0"/> : <ArrowDownRight className="w-3.5 h-3.5 text-emerald-500 shrink-0"/>}
+                        <span className="truncate">{p.party}</span>
                       </div>
-                      <div className={`text-xs mt-1 font-medium ${p.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                        Due: {p.dueDate} {p.isOverdue && <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">OVERDUE</span>}
+                      <div className={`text-[11px] sm:text-xs mt-1 font-medium ${p.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                        Due: {p.dueDate} {p.isOverdue && <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">OVERDUE</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 px-5 text-right">
-                      <div className="font-semibold text-amber-600 dark:text-amber-500 text-sm">{formatCurrency(p.outstanding)}</div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">of {formatCurrency(p.total)}</div>
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-5 text-right">
+                      <div className="font-semibold text-amber-600 dark:text-amber-500 text-xs sm:text-sm">{formatCurrency(p.outstanding)}</div>
+                      <div className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 mt-1">of {formatCurrency(p.total)}</div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -335,27 +335,29 @@ export function DashboardClient({
 
         {/* Active Shipments */}
         <Card className="border-slate-200 dark:border-slate-800 shadow-sm dark:bg-slate-900 col-span-1 lg:col-span-1 flex flex-col rounded-2xl overflow-hidden">
-          <CardHeader className="pb-3 pt-5 px-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
+          <CardHeader className="pb-3 pt-4 sm:pt-5 px-4 sm:px-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
             <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-50 uppercase tracking-wider flex items-center gap-2">
               <Truck className="w-4 h-4 text-blue-500"/> Active Shipments
             </CardTitle>
           </CardHeader>
-          <div className="flex-1 overflow-auto max-h-[400px]">
+          <div className="flex-1 overflow-auto max-h-[350px] sm:max-h-[400px]">
             <Table>
               <TableBody>
                 {activeShipments.map((s, idx) => (
                   <TableRow key={idx} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <TableCell className="py-4 px-5">
-                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-sm truncate max-w-[150px]" title={s.id}>{s.id}</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-                        {s.origin} <span className="text-slate-300 dark:text-slate-600">&rarr;</span> {s.destination}
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-5 max-w-[120px] sm:max-w-none">
+                      <div className="font-semibold text-slate-900 dark:text-slate-200 text-xs sm:text-sm truncate" title={s.id}>{s.id}</div>
+                      <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-1">
+                        <span className="truncate max-w-[60px] sm:max-w-none">{s.origin}</span> 
+                        <span className="text-slate-300 dark:text-slate-600 shrink-0">&rarr;</span> 
+                        <span className="truncate max-w-[60px] sm:max-w-none">{s.destination}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 px-5 text-right">
-                      <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 mb-1.5 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50 px-2 py-0.5 rounded-full font-medium">
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-5 text-right">
+                      <Badge variant="outline" className="text-[9px] sm:text-[10px] bg-blue-50 text-blue-700 border-blue-200 mb-1.5 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50 px-2 py-0.5 rounded-full font-medium">
                         In Transit
                       </Badge>
-                      <div className="text-xs font-medium text-slate-500 dark:text-slate-400">ETA: {s.eta}</div>
+                      <div className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">ETA: {s.eta}</div>
                     </TableCell>
                   </TableRow>
                 ))}
