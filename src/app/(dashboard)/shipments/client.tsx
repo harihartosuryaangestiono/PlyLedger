@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { createShipment } from "./actions";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Printer } from "lucide-react";
+import Link from "next/link";
 
 export function ShipmentClient({ initialShipments }: any) {
   const [open, setOpen] = useState(false);
@@ -108,12 +109,13 @@ export function ShipmentClient({ initialShipments }: any) {
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">ETD</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">ETA</TableHead>
               <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Status</TableHead>
+              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {initialShipments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                   No shipments found.
                 </TableCell>
               </TableRow>
@@ -134,6 +136,13 @@ export function ShipmentClient({ initialShipments }: any) {
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{shipment.etd ? new Date(shipment.etd).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : "-"}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{shipment.eta ? new Date(shipment.eta).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : "-"}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(shipment.status)}</TableCell>
+                  <TableCell className="text-right py-3.5 border-b border-slate-100">
+                    <Link href={`/print/shipment/${shipment.id}`}>
+                      <Button variant="outline" size="sm" className="h-8">
+                        <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                      </Button>
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))
             )}

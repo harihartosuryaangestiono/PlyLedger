@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { recordPayment } from "./actions";
-import { DollarSign, Search } from "lucide-react";
+import { DollarSign, Search, Printer } from "lucide-react";
+import Link from "next/link";
 
 export function PaymentClient({ initialInvoices }: any) {
   const [open, setOpen] = useState(false);
@@ -145,13 +146,20 @@ export function PaymentClient({ initialInvoices }: any) {
                     </TableCell>
                     <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(inv.status)}</TableCell>
                     <TableCell className="text-right py-3.5 border-b border-slate-100">
-                      {inv.status !== "PAID" ? (
-                        <Button variant="outline" size="sm" onClick={() => handlePayClick(inv)} className="h-8">
-                          <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Pay
-                        </Button>
-                      ) : (
-                        <span className="text-sm text-slate-400 font-medium mr-4">Settled</span>
-                      )}
+                      <div className="flex justify-end items-center gap-2">
+                        {inv.status !== "PAID" ? (
+                          <Button variant="outline" size="sm" onClick={() => handlePayClick(inv)} className="h-8">
+                            <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Pay
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-slate-400 font-medium mr-2">Settled</span>
+                        )}
+                        <Link href={`/print/invoice/${inv.id}`}>
+                          <Button variant="outline" size="sm" className="h-8">
+                            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                          </Button>
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

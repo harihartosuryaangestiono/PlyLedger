@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { createPurchaseOrder } from "./actions";
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
+import Link from "next/link";
 
 export function PurchaseClient({ initialOrders, suppliers, products }: any) {
   const [open, setOpen] = useState(false);
@@ -159,12 +160,13 @@ export function PurchaseClient({ initialOrders, suppliers, products }: any) {
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Supplier</TableHead>
               <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Total Cost</TableHead>
               <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Status</TableHead>
+              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {initialOrders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                   No purchase orders found.
                 </TableCell>
               </TableRow>
@@ -177,6 +179,13 @@ export function PurchaseClient({ initialOrders, suppliers, products }: any) {
                     Rp {po.totalCost.toLocaleString("id-ID")}
                   </TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(po.status)}</TableCell>
+                  <TableCell className="text-right py-3.5 border-b border-slate-100">
+                    <Link href={`/print/po/${po.id}`}>
+                      <Button variant="outline" size="sm" className="h-8">
+                        <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                      </Button>
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))
             )}
