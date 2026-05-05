@@ -8,10 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { createShipment } from "./actions";
-import { Plus, Search, Printer } from "lucide-react";
-import Link from "next/link";
+import { Plus, Search } from "lucide-react";
 
-export function ShipmentClient({ initialShipments , readOnly }: any) {
+export function ShipmentClient({ initialShipments }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -55,50 +54,48 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search Shipments..." className="pl-8 max-w-xs" />
           </div>
-          {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Shipment</Button>} />
-              <DialogContent className="sm:max-w-2xl w-full">
-                <DialogHeader>
-                  <DialogTitle>Track New Shipment</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={onSubmit} className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="containerNumber">Container Number</Label>
-                        <Input id="containerNumber" name="containerNumber" placeholder="e.g., MSKU1234567" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="billOfLading">Bill of Lading (BL)</Label>
-                        <Input id="billOfLading" name="billOfLading" placeholder="e.g., BL987654321" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="originPort">Origin Port</Label>
-                        <Input id="originPort" name="originPort" placeholder="e.g., Shanghai" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="destinationPort">Destination Port</Label>
-                        <Input id="destinationPort" name="destinationPort" placeholder="e.g., Los Angeles" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="etd">ETD</Label>
-                        <Input id="etd" name="etd" type="date" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="eta">ETA</Label>
-                        <Input id="eta" name="eta" type="date" />
-                      </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Shipment</Button>} />
+            <DialogContent className="sm:max-w-2xl w-full">
+              <DialogHeader>
+                <DialogTitle>Track New Shipment</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="containerNumber">Container Number</Label>
+                      <Input id="containerNumber" name="containerNumber" placeholder="e.g., MSKU1234567" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="billOfLading">Bill of Lading (BL)</Label>
+                      <Input id="billOfLading" name="billOfLading" placeholder="e.g., BL987654321" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="originPort">Origin Port</Label>
+                      <Input id="originPort" name="originPort" placeholder="e.g., Shanghai" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="destinationPort">Destination Port</Label>
+                      <Input id="destinationPort" name="destinationPort" placeholder="e.g., Los Angeles" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="etd">ETD</Label>
+                      <Input id="etd" name="etd" type="date" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="eta">ETA</Label>
+                      <Input id="eta" name="eta" type="date" />
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex justify-end pt-2">
-                    <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Shipment"}</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Shipment"}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -111,13 +108,12 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">ETD</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">ETA</TableHead>
               <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Status</TableHead>
-              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {initialShipments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                   No shipments found.
                 </TableCell>
               </TableRow>
@@ -138,13 +134,6 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{shipment.etd ? new Date(shipment.etd).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : "-"}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{shipment.eta ? new Date(shipment.eta).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : "-"}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(shipment.status)}</TableCell>
-                  <TableCell className="text-right py-3.5 border-b border-slate-100">
-                    <Link href={`/print/shipment/${shipment.id}`}>
-                      <Button variant="outline" size="sm" className="h-8">
-                        <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
-                      </Button>
-                    </Link>
-                  </TableCell>
                 </TableRow>
               ))
             )}

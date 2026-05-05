@@ -1,9 +1,17 @@
 "use server";
 
+import { canEdit, hasAccess } from "@/lib/permissions";
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function getInvoices() {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!hasAccess(role, "payments")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
   try {
     return await prisma.invoice.findMany({
       include: {
@@ -25,6 +33,12 @@ export async function recordPayment(data: {
   method: string;
   reference: string;
 }) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "payments")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
   try {
     const invoice = await prisma.invoice.findUnique({
       where: { id: data.invoiceId },

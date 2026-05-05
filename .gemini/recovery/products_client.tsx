@@ -19,7 +19,7 @@ type Product = {
   size: string;
 };
 
-export function ProductClient({ initialProducts , readOnly }: { initialProducts: Product[] , readOnly?: boolean }) {
+export function ProductClient({ initialProducts }: { initialProducts: Product[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState("MR");
@@ -49,71 +49,69 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
         </div>
         <div className="flex items-center gap-4">
           <Input placeholder="Search products..." className="max-w-xs" />
-          {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Product</Button>} />
-              <DialogContent className="sm:max-w-xl w-full">
-                <DialogHeader>
-                  <DialogTitle>Add New Product</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={onSubmit} className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Product</Button>} />
+            <DialogContent className="sm:max-w-xl w-full">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Product Name</Label>
+                    <Input id="name" name="name" placeholder="e.g., Meranti Plywood" required />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Product Name</Label>
-                      <Input id="name" name="name" placeholder="e.g., Meranti Plywood" required />
+                      <Label>Type</Label>
+                      <Select value={type} onValueChange={(v) => setType(v || "")}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MR">MR (Moisture Resistant)</SelectItem>
+                          <SelectItem value="WBP">WBP (Weather/Boil Proof)</SelectItem>
+                          <SelectItem value="Film Faced">Film Faced</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Type</Label>
-                        <Select value={type} onValueChange={(v) => setType(v || "")}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MR">MR (Moisture Resistant)</SelectItem>
-                            <SelectItem value="WBP">WBP (Weather/Boil Proof)</SelectItem>
-                            <SelectItem value="Film Faced">Film Faced</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Grade</Label>
-                        <Select value={grade} onValueChange={(v) => setGrade(v || "")}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="A">A</SelectItem>
-                            <SelectItem value="B">B</SelectItem>
-                            <SelectItem value="C">C</SelectItem>
-                            <SelectItem value="BB/CC">BB/CC</SelectItem>
-                            <SelectItem value="Uty">Utility</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="thickness">Thickness</Label>
-                        <Input id="thickness" name="thickness" placeholder="e.g., 18mm" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="size">Size</Label>
-                        <Input id="size" name="size" placeholder="e.g., 1220x2440" required />
-                      </div>
+                    <div className="space-y-2">
+                      <Label>Grade</Label>
+                      <Select value={grade} onValueChange={(v) => setGrade(v || "")}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select grade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A">A</SelectItem>
+                          <SelectItem value="B">B</SelectItem>
+                          <SelectItem value="C">C</SelectItem>
+                          <SelectItem value="BB/CC">BB/CC</SelectItem>
+                          <SelectItem value="Uty">Utility</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-2">
-                    <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Product"}</Button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="thickness">Thickness</Label>
+                      <Input id="thickness" name="thickness" placeholder="e.g., 18mm" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="size">Size</Label>
+                      <Input id="size" name="size" placeholder="e.g., 1220x2440" required />
+                    </div>
                   </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Product"}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -145,7 +143,9 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{product.thickness}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{product.size}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">
-                    {/* readOnly handling */}
+                    <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))

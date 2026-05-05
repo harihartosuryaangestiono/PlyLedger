@@ -1,9 +1,19 @@
+import { hasAccess, canEdit } from "@/lib/permissions";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { getSalesOrders, getCustomersForSelect, getProductsForSelect } from "./actions";
 import { SalesClient } from "./client";
 
 export const dynamic = "force-dynamic";
 
 export default async function SalesPage() {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!hasAccess(role, "sales")) {
+    redirect("/access-denied");
+  }
+  const isReadOnly = !canEdit(role, "sales");
+
   const [salesOrders, customers, products] = await Promise.all([
     getSalesOrders(),
     getCustomersForSelect(),
@@ -20,7 +30,7 @@ export default async function SalesPage() {
         initialOrders={salesOrders} 
         customers={customers} 
         products={products} 
-      />
+       readOnly={isReadOnly} />
     </div>
   );
 }

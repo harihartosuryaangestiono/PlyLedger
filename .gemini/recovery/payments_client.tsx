@@ -8,10 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { recordPayment } from "./actions";
-import { DollarSign, Search, Printer } from "lucide-react";
-import Link from "next/link";
+import { DollarSign, Search } from "lucide-react";
 
-export function PaymentClient({ initialInvoices , readOnly }: any) {
+export function PaymentClient({ initialInvoices }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -62,50 +61,46 @@ export function PaymentClient({ initialInvoices , readOnly }: any) {
         </div>
       </div>
 
-      {/* readOnly handling */}
-
-      {!readOnly && (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-md w-full">
-            <DialogHeader>
-              <DialogTitle>Record Payment: {selectedInvoice?.invoiceNumber}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="text-sm font-medium text-slate-500">Total Invoice Amount</span>
-                  <span className="text-sm font-bold">Rp {selectedInvoice?.amount.toLocaleString("id-ID")}</span>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Payment Amount (Rp)</Label>
-                  <Input 
-                    name="amount" 
-                    type="number" 
-                    step="0.01" 
-                    max={selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0} 
-                    required 
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Remaining balance: Rp {(selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0).toLocaleString("id-ID")}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Payment Method</Label>
-                  <Input name="method" placeholder="e.g., Bank Transfer, Check" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Reference / Memo</Label>
-                  <Input name="reference" placeholder="e.g., TXN-98765" />
-                </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle>Record Payment: {selectedInvoice?.invoiceNumber}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-sm font-medium text-slate-500">Total Invoice Amount</span>
+                <span className="text-sm font-bold">Rp {selectedInvoice?.amount.toLocaleString("id-ID")}</span>
               </div>
-              <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={loading} className="w-full">{loading ? "Processing..." : "Submit Payment"}</Button>
+              
+              <div className="space-y-2">
+                <Label>Payment Amount (Rp)</Label>
+                <Input 
+                  name="amount" 
+                  type="number" 
+                  step="0.01" 
+                  max={selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0} 
+                  required 
+                />
+                <p className="text-xs text-muted-foreground">
+                  Remaining balance: Rp {(selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0).toLocaleString("id-ID")}
+                </p>
               </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+              <div className="space-y-2">
+                <Label>Payment Method</Label>
+                <Input name="method" placeholder="e.g., Bank Transfer, Check" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Reference / Memo</Label>
+                <Input name="reference" placeholder="e.g., TXN-98765" />
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={loading} className="w-full">{loading ? "Processing..." : "Submit Payment"}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="rounded-2xl border border-slate-200 bg-card shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
         <Table>
@@ -150,20 +145,13 @@ export function PaymentClient({ initialInvoices , readOnly }: any) {
                     </TableCell>
                     <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(inv.status)}</TableCell>
                     <TableCell className="text-right py-3.5 border-b border-slate-100">
-                      <div className="flex justify-end items-center gap-2">
-                        {!readOnly && inv.status !== "PAID" ? (
-                          <Button variant="outline" size="sm" onClick={() => handlePayClick(inv)} className="h-8">
-                            <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Pay
-                          </Button>
-                        ) : (
-                          <span className="text-sm text-slate-400 font-medium mr-2">{inv.status === "PAID" ? "Settled" : ""}</span>
-                        )}
-                        <Link href={`/print/invoice/${inv.id}`}>
-                          <Button variant="outline" size="sm" className="h-8">
-                            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
-                          </Button>
-                        </Link>
-                      </div>
+                      {inv.status !== "PAID" ? (
+                        <Button variant="outline" size="sm" onClick={() => handlePayClick(inv)} className="h-8">
+                          <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Pay
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-slate-400 font-medium mr-4">Settled</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

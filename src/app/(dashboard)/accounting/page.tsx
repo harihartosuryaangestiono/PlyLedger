@@ -1,3 +1,6 @@
+import { hasAccess, canEdit } from "@/lib/permissions";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { getJournalEntries, getAuditLogs } from "./actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const dynamic = "force-dynamic";
 
 export default async function AccountingPage() {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!hasAccess(role, "accounting")) {
+    redirect("/access-denied");
+  }
+  const isReadOnly = !canEdit(role, "accounting");
+
   const [journals, audits] = await Promise.all([
     getJournalEntries(),
     getAuditLogs()

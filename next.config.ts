@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
     // your project has type errors. Vercel sometimes has issues generating Prisma types.
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;

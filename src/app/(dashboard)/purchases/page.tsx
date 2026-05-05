@@ -1,9 +1,19 @@
+import { hasAccess, canEdit } from "@/lib/permissions";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { getPurchaseOrders, getSuppliersForSelect, getProductsForSelect } from "./actions";
 import { PurchaseClient } from "./client";
 
 export const dynamic = "force-dynamic";
 
 export default async function PurchasesPage() {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!hasAccess(role, "purchases")) {
+    redirect("/access-denied");
+  }
+  const isReadOnly = !canEdit(role, "purchases");
+
   const [purchaseOrders, suppliers, products] = await Promise.all([
     getPurchaseOrders(),
     getSuppliersForSelect(),
@@ -20,7 +30,7 @@ export default async function PurchasesPage() {
         initialOrders={purchaseOrders} 
         suppliers={suppliers} 
         products={products} 
-      />
+       readOnly={isReadOnly} />
     </div>
   );
 }

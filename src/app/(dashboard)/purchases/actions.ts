@@ -1,9 +1,17 @@
 "use server";
 
+import { canEdit, hasAccess } from "@/lib/permissions";
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function getPurchaseOrders() {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!hasAccess(role, "purchases")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
   try {
     return await prisma.purchaseOrder.findMany({
       include: {
@@ -19,6 +27,12 @@ export async function getPurchaseOrders() {
 }
 
 export async function getSuppliersForSelect() {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!hasAccess(role, "purchases")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
   try {
     return await prisma.supplier.findMany({
       select: { id: true, name: true }
@@ -27,6 +41,12 @@ export async function getSuppliersForSelect() {
 }
 
 export async function getProductsForSelect() {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!hasAccess(role, "purchases")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
   try {
     return await prisma.product.findMany({
       select: { id: true, name: true, type: true, thickness: true, size: true }
@@ -40,6 +60,12 @@ export async function createPurchaseOrder(data: {
   currency: string;
   items: { productId: string; quantity: number; unitPrice: number; unit: string }[];
 }) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "purchases")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
   try {
     // Calculate total cost from items
     const itemsCost = data.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);

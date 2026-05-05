@@ -12,7 +12,7 @@ import { createSalesOrder } from "./actions";
 import { Plus, Printer } from "lucide-react";
 import Link from "next/link";
 
-export function SalesClient({ initialOrders, customers, products }: any) {
+export function SalesClient({ initialOrders, customers, products , readOnly }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([{ productId: "", quantity: 1, sellingPrice: 0, unit: "cbm" }]);
@@ -75,93 +75,96 @@ export function SalesClient({ initialOrders, customers, products }: any) {
         </div>
         <div className="flex items-center gap-4">
           <Input placeholder="Search SO..." className="max-w-xs" />
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create SO</Button>} />
-            <DialogContent className="sm:max-w-3xl w-full">
-              <DialogHeader>
-                <DialogTitle>Create Sales Order</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={onSubmit} className="space-y-6">
-                <div className="bg-slate-50 p-4 rounded-lg border">
-                  <h3 className="font-medium mb-4 text-sm text-slate-700">General Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="soNumber">SO Number</Label>
-                      <Input id="soNumber" name="soNumber" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Customer</Label>
-                      <Select value={customerId} onValueChange={(v) => setCustomerId(v || "")}>
-                        <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                        <SelectContent>
-                          {customers.map((c: any) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Input id="currency" name="currency" defaultValue="IDR" readOnly className="bg-slate-50 text-slate-500 hidden" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Payment Terms</Label>
-                      <Select value={paymentTerms} onValueChange={(v) => setPaymentTerms(v || "")}>
-                        <SelectTrigger><SelectValue placeholder="Terms" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CASH">Cash</SelectItem>
-                          <SelectItem value="INSTALLMENT">Installment</SelectItem>
-                          <SelectItem value="LC">Letter of Credit (LC)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium text-sm text-slate-700">Products</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={addItem}>+ Add Item</Button>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {items.map((item, idx) => (
-                      <div key={idx} className="flex gap-2 items-center bg-white p-2 border rounded-md">
-                        <Select value={item.productId} onValueChange={(v) => updateItem(idx, "productId", v)}>
-                          <SelectTrigger className="flex-1 border-0 shadow-none"><SelectValue placeholder="Select product" /></SelectTrigger>
+          {!readOnly && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create SO</Button>} />
+              <DialogContent className="sm:max-w-3xl w-full">
+                <DialogHeader>
+                  <DialogTitle>Create Sales Order</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={onSubmit} className="space-y-6">
+                  <div className="bg-slate-50 p-4 rounded-lg border">
+                    <h3 className="font-medium mb-4 text-sm text-slate-700">General Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="soNumber">SO Number</Label>
+                        <Input id="soNumber" name="soNumber" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Customer</Label>
+                        <Select value={customerId} onValueChange={(v) => setCustomerId(v || "")}>
+                          <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
                           <SelectContent>
-                            {products.map((p: any) => (
-                              <SelectItem key={p.id} value={p.id}>{p.name} ({p.thickness} {p.size})</SelectItem>
+                            {customers.map((c: any) => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                        <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="w-20 border-0 shadow-none" />
-                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                        <Input placeholder="Unit" value={item.unit} onChange={(e) => updateItem(idx, "unit", e.target.value)} className="w-20 border-0 shadow-none" />
-                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                        <Input type="number" placeholder="Price" value={item.sellingPrice} onChange={(e) => updateItem(idx, "sellingPrice", e.target.value)} className="w-24 border-0 shadow-none" />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} disabled={items.length === 1} className="text-slate-400 hover:text-red-500">
-                          <span className="sr-only">Remove</span>
-                          &times;
-                        </Button>
                       </div>
-                    ))}
-                  </div>
-                  
-                  <div className="flex justify-end pt-2 border-t border-slate-200 mt-4">
-                    <div className="text-right">
-                      <span className="text-sm text-slate-500 mr-4">Calculated Total</span>
-                      <span className="text-lg font-bold text-slate-900">Rp {totalAmount.toLocaleString("id-ID")}</span>
+                      <div className="space-y-2">
+                        <Label htmlFor="currency">Currency</Label>
+                        <Input id="currency" name="currency" defaultValue="IDR" readOnly className="bg-slate-50 text-slate-500 hidden" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Payment Terms</Label>
+                        <Select value={paymentTerms} onValueChange={(v) => setPaymentTerms(v || "")}>
+                          <SelectTrigger><SelectValue placeholder="Terms" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CASH">Cash</SelectItem>
+                            <SelectItem value="INSTALLMENT">Installment</SelectItem>
+                            <SelectItem value="LC">Letter of Credit (LC)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex justify-end pt-2">
-                  <Button type="submit" disabled={loading || !customerId} className="w-32">{loading ? "Saving..." : "Create SO"}</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-medium text-sm text-slate-700">Products</h3>
+                      <Button type="button" variant="outline" size="sm" onClick={addItem}>+ Add Item</Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {items.map((item, idx) => (
+                        <div key={idx} className="flex gap-2 items-center bg-white p-2 border rounded-md">
+                          <Select value={item.productId} onValueChange={(v) => updateItem(idx, "productId", v)}>
+                            <SelectTrigger className="flex-1 border-0 shadow-none"><SelectValue placeholder="Select product" /></SelectTrigger>
+                            <SelectContent>
+                              {products.map((p: any) => (
+                                <SelectItem key={p.id} value={p.id}>{p.name} ({p.thickness} {p.size})</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                          <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="w-20 border-0 shadow-none" />
+                          <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                          <Input placeholder="Unit" value={item.unit} onChange={(e) => updateItem(idx, "unit", e.target.value)} className="w-20 border-0 shadow-none" />
+                          <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                          <Input type="number" placeholder="Price" value={item.sellingPrice} onChange={(e) => updateItem(idx, "sellingPrice", e.target.value)} className="w-24 border-0 shadow-none" />
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} disabled={items.length === 1} className="text-slate-400 hover:text-red-500">
+                            <span className="sr-only">Remove</span>
+                            &times;
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex justify-end pt-2 border-t border-slate-200 mt-4">
+                      <div className="text-right">
+                        <span className="text-sm text-slate-500 mr-4">Calculated Total</span>
+                        <span className="text-lg font-bold text-slate-900">Rp {totalAmount.toLocaleString("id-ID")}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button type="submit" disabled={loading || !customerId} className="w-32">{loading ? "Saving..." : "Create SO"}</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 

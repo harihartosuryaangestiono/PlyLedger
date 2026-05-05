@@ -18,7 +18,7 @@ type Customer = {
   address: string | null;
 };
 
-export function CustomerClient({ initialCustomers , readOnly }: { initialCustomers: Customer[] , readOnly?: boolean }) {
+export function CustomerClient({ initialCustomers }: { initialCustomers: Customer[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -46,45 +46,41 @@ export function CustomerClient({ initialCustomers , readOnly }: { initialCustome
         </div>
         <div className="flex items-center gap-4">
           <Input placeholder="Search customers..." className="max-w-xs" />
-          {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Customer</Button>} />
-              <DialogContent className="sm:max-w-md w-full">
-                <DialogHeader>
-                  <DialogTitle>Add New Customer</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={onSubmit} className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Customer Name</Label>
-                      <Input id="name" name="name" placeholder="e.g., PT Maju Jaya" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contactPerson">Contact Person</Label>
-                      <Input id="contactPerson" name="contactPerson" placeholder="e.g., Andi" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" name="email" type="email" placeholder="andi@example.com" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" name="phone" placeholder="+62..." />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input id="address" name="address" placeholder="Full address" />
-                    </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Customer</Button>} />
+            <DialogContent className="sm:max-w-md w-full">
+              <DialogHeader>
+                <DialogTitle>Add New Customer</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input id="name" name="name" placeholder="e.g., Global Timber Inc." required />
                   </div>
-                  <div className="flex justify-end pt-2">
-                    <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Customer"}</Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactPerson">Contact Person</Label>
+                    <Input id="contactPerson" name="contactPerson" placeholder="e.g., John Doe" />
                   </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" placeholder="john@example.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" name="phone" placeholder="+1 234 567 890" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input id="address" name="address" placeholder="123 Business Blvd" />
+                  </div>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Customer"}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -114,7 +110,9 @@ export function CustomerClient({ initialCustomers , readOnly }: { initialCustome
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{customer.email || "-"}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{customer.phone || "-"}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">
-                    {/* readOnly handling */}
+                    <Button variant="ghost" size="icon" onClick={() => deleteCustomer(customer.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))

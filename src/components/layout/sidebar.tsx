@@ -4,21 +4,26 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Users, Box, ShoppingCart, TrendingUp, Truck, DollarSign, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSession } from 'next-auth/react';
+import { hasAccess, ModuleName } from '@/lib/permissions';
+import { Role } from '@prisma/client';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Suppliers', href: '/suppliers', icon: Users },
-  { name: 'Customers', href: '/customers', icon: Users },
-  { name: 'Products', href: '/products', icon: Box },
-  { name: 'Purchases (PO)', href: '/purchases', icon: ShoppingCart },
-  { name: 'Sales (SO)', href: '/sales', icon: TrendingUp },
-  { name: 'Shipments', href: '/shipments', icon: Truck },
-  { name: 'Payments', href: '/payments', icon: DollarSign },
-  { name: 'Accounting', href: '/accounting', icon: BookOpen },
+  { name: 'Dashboard', href: '/', icon: Home, module: 'dashboard' },
+  { name: 'Suppliers', href: '/suppliers', icon: Users, module: 'suppliers' },
+  { name: 'Customers', href: '/customers', icon: Users, module: 'customers' },
+  { name: 'Products', href: '/products', icon: Box, module: 'products' },
+  { name: 'Purchases (PO)', href: '/purchases', icon: ShoppingCart, module: 'purchases' },
+  { name: 'Sales (SO)', href: '/sales', icon: TrendingUp, module: 'sales' },
+  { name: 'Shipments', href: '/shipments', icon: Truck, module: 'shipments' },
+  { name: 'Payments', href: '/payments', icon: DollarSign, module: 'payments' },
+  { name: 'Accounting', href: '/accounting', icon: BookOpen, module: 'accounting' },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role as Role;
 
   return (
     <div className="flex h-full w-56 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -33,6 +38,9 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="space-y-1 px-3">
           {navigation.map((item) => {
+            if (role && !hasAccess(role, item.module as ModuleName)) {
+              return null;
+            }
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             return (
               <Link
