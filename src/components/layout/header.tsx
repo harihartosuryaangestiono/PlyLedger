@@ -6,6 +6,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { signOut, useSession } from 'next-auth/react';
 
+import { MobileSidebar } from '@/components/layout/sidebar';
+
 export function Header() {
   const { data: session } = useSession();
   
@@ -20,6 +22,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-x-4 border-b bg-background px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+      <MobileSidebar />
       <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
         <form className="relative flex flex-1 items-center" action="#" method="GET">
           <label htmlFor="search-field" className="sr-only">Search</label>

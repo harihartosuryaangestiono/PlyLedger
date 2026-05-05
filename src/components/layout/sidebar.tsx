@@ -8,6 +8,11 @@ import { useSession } from 'next-auth/react';
 import { hasAccess, ModuleName } from '@/lib/permissions';
 import { Role } from '@prisma/client';
 
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home, module: 'dashboard' },
   { name: 'Suppliers', href: '/suppliers', icon: Users, module: 'suppliers' },
@@ -20,14 +25,10 @@ const navigation = [
   { name: 'Accounting', href: '/accounting', icon: BookOpen, module: 'accounting' },
 ];
 
-export function Sidebar() {
-  const pathname = usePathname();
-  const { data: session } = useSession();
-  const role = session?.user?.role as Role;
-
+function SidebarContent({ pathname, role, onItemClick }: { pathname: string; role: Role; onItemClick?: () => void }) {
   return (
-    <div className="flex h-full w-56 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-      <div className="flex h-16 items-center px-6">
+    <>
+      <div className="flex h-16 items-center px-6 border-b border-sidebar-border/50">
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 p-1.5 rounded-md text-white">
             <Box className="h-5 w-5" />
@@ -46,6 +47,7 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onItemClick}
                 className={cn(
                   isActive 
                     ? 'bg-slate-800/50 text-white border-l-2 border-blue-500 rounded-r-md rounded-l-sm' 
@@ -60,6 +62,39 @@ export function Sidebar() {
           })}
         </nav>
       </div>
+    </>
+  );
+}
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role as Role;
+
+  return (
+    <div className="hidden md:flex h-full w-56 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+      <SidebarContent pathname={pathname} role={role} />
     </div>
+  );
+}
+
+export function MobileSidebar() {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role as Role;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden mr-2">
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-64 p-0 bg-sidebar text-sidebar-foreground border-r-sidebar-border">
+        <SidebarContent pathname={pathname} role={role} onItemClick={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
   );
 }
