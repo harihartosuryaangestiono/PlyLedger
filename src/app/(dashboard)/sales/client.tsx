@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { createSalesOrder } from "./actions";
-import { Plus, Printer, Download } from "lucide-react";
+import { Plus, Printer, Download, Search } from "lucide-react";
 import Link from "next/link";
 
 export function SalesClient({ initialOrders, customers, products , readOnly }: any) {
@@ -19,15 +19,25 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
   const [customerId, setCustomerId] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("CASH");
   const [filterThickness, setFilterThickness] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCustomer, setFilterCustomer] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const uniqueThicknesses = Array.from(new Set(
     initialOrders.flatMap((so: any) => so.items.map((i: any) => i.product?.thickness)).filter(Boolean)
   )).sort() as string[];
+  const uniqueStatuses = Array.from(new Set(initialOrders.map((so: any) => so.status))).sort() as string[];
 
   const filteredOrders = initialOrders.filter((so: any) => {
     if (filterThickness !== "all") {
       const hasThickness = so.items.some((i: any) => i.product?.thickness === filterThickness);
       if (!hasThickness) return false;
+    }
+    if (filterStatus !== "all" && so.status !== filterStatus) return false;
+    if (filterCustomer !== "all" && so.customerId !== filterCustomer) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!so.soNumber.toLowerCase().includes(q) && !so.customer.name.toLowerCase().includes(q)) return false;
     }
     return true;
   });
@@ -109,15 +119,46 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Sales Orders</h2>
           <p className="text-muted-foreground mt-1 text-sm">Manage customer orders and revenue</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search SO or Customer..." 
+              className="pl-8 w-[220px]" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <Select value={filterThickness} onValueChange={setFilterThickness}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="All Thickness" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Thickness</SelectItem>
               {uniqueThicknesses.map(t => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {uniqueStatuses.map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterCustomer} onValueChange={setFilterCustomer}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="All Customers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Customers</SelectItem>
+              {customers.map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

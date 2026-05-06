@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { createPurchaseOrder } from "./actions";
-import { Plus, Printer, Download } from "lucide-react";
+import { Plus, Printer, Download, Search } from "lucide-react";
 import Link from "next/link";
 
 export function PurchaseClient({ initialOrders, suppliers, products , readOnly }: any) {
@@ -18,15 +18,25 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   const [items, setItems] = useState([{ productId: "", quantity: 1, unitPrice: 0, unit: "cbm" }]);
   const [supplierId, setSupplierId] = useState("");
   const [filterThickness, setFilterThickness] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterSupplier, setFilterSupplier] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const uniqueThicknesses = Array.from(new Set(
     initialOrders.flatMap((po: any) => po.items.map((i: any) => i.product?.thickness)).filter(Boolean)
   )).sort() as string[];
+  const uniqueStatuses = Array.from(new Set(initialOrders.map((po: any) => po.status))).sort() as string[];
 
   const filteredOrders = initialOrders.filter((po: any) => {
     if (filterThickness !== "all") {
       const hasThickness = po.items.some((i: any) => i.product?.thickness === filterThickness);
       if (!hasThickness) return false;
+    }
+    if (filterStatus !== "all" && po.status !== filterStatus) return false;
+    if (filterSupplier !== "all" && po.supplierId !== filterSupplier) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!po.poNumber.toLowerCase().includes(q) && !po.supplier.name.toLowerCase().includes(q)) return false;
     }
     return true;
   });
@@ -106,15 +116,46 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Purchase Orders</h2>
           <p className="text-muted-foreground mt-1 text-sm">Manage purchases and incoming inventory</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search PO or Supplier..." 
+              className="pl-8 w-[220px]" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <Select value={filterThickness} onValueChange={setFilterThickness}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="All Thickness" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Thickness</SelectItem>
               {uniqueThicknesses.map(t => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {uniqueStatuses.map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterSupplier} onValueChange={setFilterSupplier}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="All Suppliers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Suppliers</SelectItem>
+              {suppliers.map((s: any) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

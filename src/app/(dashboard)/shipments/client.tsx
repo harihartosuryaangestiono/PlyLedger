@@ -8,12 +8,53 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { createShipment } from "./actions";
-import { Plus, Search, Printer } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Printer, Download } from "lucide-react";
 import Link from "next/link";
 
 export function ShipmentClient({ initialShipments , readOnly }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const uniqueStatuses = Array.from(new Set(initialShipments.map((s: any) => s.status))).sort() as string[];
+
+  const filteredShipments = initialShipments.filter((s: any) => {
+    if (filterStatus !== "all" && s.status !== filterStatus) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!s.containerNumber?.toLowerCase().includes(q) && 
+          !s.billOfLading?.toLowerCase().includes(q) &&
+          !s.originPort?.toLowerCase().includes(q) &&
+          !s.destinationPort?.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const handleExport = () => {
+    const csvContent = [
+      ["Container Number", "Bill Of Lading", "Origin", "Destination", "ETD", "ETA", "Status"],
+      ...filteredShipments.map((s: any) => [
+        `"${s.containerNumber || ''}"`, 
+        `"${s.billOfLading || ''}"`, 
+        `"${s.originPort || ''}"`, 
+        `"${s.destinationPort || ''}"`, 
+        `"${s.etd ? new Date(s.etd).toLocaleDateString() : ''}"`, 
+        `"${s.eta ? new Date(s.eta).toLocaleDateString() : ''}"`, 
+        `"${s.status}"`
+      ])
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `shipments_report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,11 +91,30 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Shipments Tracking</h2>
           <p className="text-muted-foreground mt-1 text-sm">Monitor logistics and container movements</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search Shipments..." className="pl-8 max-w-xs" />
+            <Input 
+              placeholder="Search Container, BL, Port..." 
+              className="pl-8 w-[240px]" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {uniqueStatuses.map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
           {!readOnly && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Shipment</Button>} />
@@ -115,14 +175,14 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialShipments.length === 0 ? (
+            {filteredShipments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                   No shipments found.
                 </TableCell>
               </TableRow>
             ) : (
-              initialShipments.map((shipment: any, idx: number) => (
+              filteredShipments.map((shipment: any, idx: number) => (
                 <TableRow key={shipment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8FAFC]/60'}>
                   <TableCell className="py-3.5 border-b border-slate-100">
                     <div className="font-medium text-slate-900">{shipment.containerNumber || "TBA"}</div>

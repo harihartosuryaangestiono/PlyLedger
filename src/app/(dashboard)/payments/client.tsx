@@ -8,13 +8,58 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { recordPayment } from "./actions";
-import { DollarSign, Search, Printer } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DollarSign, Search, Printer, Download } from "lucide-react";
 import Link from "next/link";
 
 export function PaymentClient({ initialInvoices , readOnly }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const uniqueStatuses = Array.from(new Set(initialInvoices.map((inv: any) => inv.status))).sort() as string[];
+  const uniqueTypes = Array.from(new Set(initialInvoices.map((inv: any) => inv.type))).sort() as string[];
+
+  const filteredInvoices = initialInvoices.filter((inv: any) => {
+    if (filterStatus !== "all" && inv.status !== filterStatus) return false;
+    if (filterType !== "all" && inv.type !== filterType) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const entityName = inv.purchaseOrder ? inv.purchaseOrder.supplier.name : (inv.salesOrder?.customer?.name || "");
+      if (!inv.invoiceNumber?.toLowerCase().includes(q) && !entityName.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const handleExport = () => {
+    const csvContent = [
+      ["Invoice Number", "Type", "Related Entity", "Amount", "Paid", "Status"],
+      ...filteredInvoices.map((inv: any) => {
+        const entityName = inv.purchaseOrder ? inv.purchaseOrder.supplier.name : (inv.salesOrder?.customer?.name || "");
+        const paid = inv.payments.reduce((s:any, p:any) => s + p.amount, 0);
+        return [
+          `"${inv.invoiceNumber || ''}"`, 
+          `"${inv.type || ''}"`, 
+          `"${entityName}"`, 
+          `"${inv.amount || 0}"`, 
+          `"${paid}"`, 
+          `"${inv.status}"`
+        ];
+      })
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `payments_report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -54,11 +99,41 @@ export function PaymentClient({ initialInvoices , readOnly }: any) {
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Payments & Invoices</h2>
           <p className="text-muted-foreground mt-1 text-sm">Manage accounts receivable and payable</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search invoices..." className="pl-8 max-w-xs" />
+            <Input 
+              placeholder="Search Invoice or Entity..." 
+              className="pl-8 w-[220px]" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {uniqueStatuses.map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {uniqueTypes.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
         </div>
       </div>
 
@@ -121,14 +196,14 @@ export function PaymentClient({ initialInvoices , readOnly }: any) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialInvoices.length === 0 ? (
+            {filteredInvoices.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                  No invoices found. Create a PO or SO first.
+                  No invoices found.
                 </TableCell>
               </TableRow>
             ) : (
-              initialInvoices.map((inv: any, idx: number) => {
+              filteredInvoices.map((inv: any, idx: number) => {
                 const paid = inv.payments.reduce((s:any, p:any) => s + p.amount, 0);
                 return (
                   <TableRow key={inv.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8FAFC]/60'}>

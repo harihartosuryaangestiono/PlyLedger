@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createProduct, deleteProduct } from "./actions";
-import { Trash2, Plus, Download } from "lucide-react";
+import { Trash2, Plus, Download, Search } from "lucide-react";
 
 type Product = {
   id: string;
@@ -26,11 +26,22 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
   const [type, setType] = useState("MR"); // Glue
   const [grade, setGrade] = useState("OVL");
   const [filterThickness, setFilterThickness] = useState("all");
+  const [filterGlue, setFilterGlue] = useState("all");
+  const [filterGrade, setFilterGrade] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const uniqueThicknesses = Array.from(new Set(initialProducts.map((p) => p.thickness))).sort();
+  const uniqueGlues = Array.from(new Set(initialProducts.map((p) => p.type))).sort();
+  const uniqueGrades = Array.from(new Set(initialProducts.map((p) => p.grade))).sort();
 
   const filteredProducts = initialProducts.filter((p) => {
     if (filterThickness !== "all" && p.thickness !== filterThickness) return false;
+    if (filterGlue !== "all" && p.type !== filterGlue) return false;
+    if (filterGrade !== "all" && p.grade !== filterGrade) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!p.name.toLowerCase().includes(q) && !(p.sku || "").toLowerCase().includes(q)) return false;
+    }
     return true;
   });
 
@@ -73,15 +84,46 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Products Catalog</h2>
           <p className="text-muted-foreground mt-1 text-sm">Manage plywood specifications and inventory items</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search SKU or Name..." 
+              className="pl-8 w-[200px]" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <Select value={filterThickness} onValueChange={setFilterThickness}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="All Thickness" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Thickness</SelectItem>
               {uniqueThicknesses.map(t => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterGlue} onValueChange={setFilterGlue}>
+            <SelectTrigger className="w-[110px]">
+              <SelectValue placeholder="All Glue" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Glue</SelectItem>
+              {uniqueGlues.map(g => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterGrade} onValueChange={setFilterGrade}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="All Grade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Grade</SelectItem>
+              {uniqueGrades.map(g => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
               ))}
             </SelectContent>
           </Select>
