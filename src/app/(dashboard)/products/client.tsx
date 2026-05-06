@@ -14,7 +14,7 @@ type Product = {
   id: string;
   sku?: string | null;
   name: string;
-  type: string;
+  type: string; // Used for Glue
   thickness: string;
   grade: string;
   size: string;
@@ -23,8 +23,8 @@ type Product = {
 export function ProductClient({ initialProducts , readOnly }: { initialProducts: Product[] , readOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState("MR");
-  const [grade, setGrade] = useState("A");
+  const [type, setType] = useState("MR"); // Glue
+  const [grade, setGrade] = useState("OVL");
   const [filterThickness, setFilterThickness] = useState("all");
 
   const uniqueThicknesses = Array.from(new Set(initialProducts.map((p) => p.thickness))).sort();
@@ -36,7 +36,7 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
 
   const handleExport = () => {
     const csvContent = [
-      ["SKU", "Name", "Type", "Grade", "Thickness", "Size"],
+      ["SKU", "Name", "Glue", "Grade", "Thickness", "Size"],
       ...filteredProducts.map(p => [`"${p.sku || ''}"`, `"${p.name}"`, `"${p.type}"`, `"${p.grade}"`, `"${p.thickness}"`, `"${p.size}"`])
     ].map(e => e.join(",")).join("\n");
 
@@ -110,15 +110,17 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Type</Label>
+                        <Label>Glue</Label>
                         <Select value={type} onValueChange={(v) => setType(v || "")}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
+                            <SelectValue placeholder="Select glue" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="MR">MR (Moisture Resistant)</SelectItem>
-                            <SelectItem value="WBP">WBP (Weather/Boil Proof)</SelectItem>
-                            <SelectItem value="Film Faced">Film Faced</SelectItem>
+                            <SelectItem value="MR">MR</SelectItem>
+                            <SelectItem value="E2">E2</SelectItem>
+                            <SelectItem value="E1">E1</SelectItem>
+                            <SelectItem value="E0">E0</SelectItem>
+                            <SelectItem value="CARB">CARB</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -130,11 +132,11 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
                             <SelectValue placeholder="Select grade" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="A">A</SelectItem>
-                            <SelectItem value="B">B</SelectItem>
-                            <SelectItem value="C">C</SelectItem>
-                            <SelectItem value="BB/CC">BB/CC</SelectItem>
-                            <SelectItem value="Uty">Utility</SelectItem>
+                            <SelectItem value="OVL">OVL</SelectItem>
+                            <SelectItem value="BBCC">BBCC</SelectItem>
+                            <SelectItem value="UTY Ekspor">UTY Ekspor</SelectItem>
+                            <SelectItem value="Uty Lokal">Uty Lokal</SelectItem>
+                            <SelectItem value="PG">PG</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -168,7 +170,7 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
             <TableRow className="border-none">
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">SKU</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Name</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Type</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Glue</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Grade</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Thickness</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Size</TableHead>
