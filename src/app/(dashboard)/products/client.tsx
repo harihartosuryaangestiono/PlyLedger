@@ -12,6 +12,7 @@ import { Trash2, Plus, Download } from "lucide-react";
 
 type Product = {
   id: string;
+  sku?: string | null;
   name: string;
   type: string;
   thickness: string;
@@ -35,8 +36,8 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
 
   const handleExport = () => {
     const csvContent = [
-      ["Name", "Type", "Grade", "Thickness", "Size"],
-      ...filteredProducts.map(p => [`"${p.name}"`, `"${p.type}"`, `"${p.grade}"`, `"${p.thickness}"`, `"${p.size}"`])
+      ["SKU", "Name", "Type", "Grade", "Thickness", "Size"],
+      ...filteredProducts.map(p => [`"${p.sku || ''}"`, `"${p.name}"`, `"${p.type}"`, `"${p.grade}"`, `"${p.thickness}"`, `"${p.size}"`])
     ].map(e => e.join(",")).join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -54,6 +55,7 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     await createProduct({
+      sku: formData.get("sku") as string,
       name: formData.get("name") as string,
       type: type,
       thickness: formData.get("thickness") as string,
@@ -95,9 +97,15 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
                 </DialogHeader>
                 <form onSubmit={onSubmit} className="space-y-4">
                   <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Product Name</Label>
-                      <Input id="name" name="name" placeholder="e.g., Meranti Plywood" required />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="sku">SKU (Optional)</Label>
+                        <Input id="sku" name="sku" placeholder="e.g., PLY-MR-18" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Product Name</Label>
+                        <Input id="name" name="name" placeholder="e.g., Meranti Plywood" required />
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -158,6 +166,7 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
         <Table>
           <TableHeader className="bg-[#F8FAFC] sticky top-0 border-b border-slate-200">
             <TableRow className="border-none">
+              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">SKU</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Name</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Type</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Grade</TableHead>
@@ -169,13 +178,14 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
           <TableBody>
             {filteredProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                   No products found.
                 </TableCell>
               </TableRow>
             ) : (
               filteredProducts.map((product, idx) => (
                 <TableRow key={product.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8FAFC]/60'}>
+                  <TableCell className="font-medium text-slate-500 py-3.5 border-b border-slate-100">{product.sku || '-'}</TableCell>
                   <TableCell className="font-medium text-slate-900 py-3.5 border-b border-slate-100">{product.name}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{product.type}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{product.grade}</TableCell>

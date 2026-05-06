@@ -22,7 +22,7 @@ export async function getProducts() {
   }
 }
 
-export async function createProduct(data: { name: string; type: string; thickness: string; grade: string; size: string; }) {
+export async function createProduct(data: { name: string; sku?: string; type: string; thickness: string; grade: string; size: string; }) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";
   if (!canEdit(role, "products")) {

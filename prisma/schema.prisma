@@ -59,6 +59,7 @@ model Customer {
 model Product {
   id            String         @id @default(uuid())
   name          String
+  sku           String?        @unique
   type          String         // e.g., MR, WBP, Film Faced
   thickness     String         // e.g., 12mm, 18mm
   grade         String         // e.g., A/B/C
