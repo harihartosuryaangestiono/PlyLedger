@@ -86,11 +86,9 @@ export function MobileSidebar() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden mr-2">
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle Sidebar</span>
-        </Button>
+      <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden mr-2" />}>
+        <Menu className="h-5 w-5" />
+        <span className="sr-only">Toggle Sidebar</span>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0 bg-sidebar text-sidebar-foreground border-r-sidebar-border">
         <SidebarContent pathname={pathname} role={role} onItemClick={() => setOpen(false)} />

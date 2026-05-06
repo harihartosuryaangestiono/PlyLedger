@@ -30,8 +30,13 @@ export async function createProduct(data: { name: string; sku?: string; type: st
   }
 
   try {
+    const skuValue = data.sku && data.sku.trim() !== "" ? data.sku.trim() : null;
+    
     await prisma.product.create({
-      data,
+      data: {
+        ...data,
+        sku: skuValue
+      },
     });
     revalidatePath("/products");
     return { success: true };
