@@ -58,7 +58,11 @@ export async function createPurchaseOrder(data: {
   poNumber: string;
   supplierId: string;
   currency: string;
-  items: { productId: string; quantity: number; unitPrice: number; unit: string }[];
+  subTotal: number;
+  hasTax: boolean;
+  taxAmount: number;
+  totalAmount: number;
+  items: { productId: string; pallets?: number | null; quantity: number; unitPrice: number; unit: string; totalPrice: number }[];
 }) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";
@@ -67,22 +71,23 @@ export async function createPurchaseOrder(data: {
   }
 
   try {
-    // Calculate total cost from items
-    const itemsCost = data.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
-
     const po = await prisma.purchaseOrder.create({
       data: {
         poNumber: data.poNumber,
         supplierId: data.supplierId,
         currency: data.currency,
-        totalCost: itemsCost,
+        subTotal: data.subTotal,
+        hasTax: data.hasTax,
+        taxAmount: data.taxAmount,
+        totalCost: data.totalAmount, // Map UI grandTotal to db totalCost
         items: {
           create: data.items.map(item => ({
             productId: item.productId,
+            pallets: item.pallets,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             unit: item.unit,
-            totalPrice: item.quantity * item.unitPrice
+            totalPrice: item.totalPrice
           }))
         }
       }

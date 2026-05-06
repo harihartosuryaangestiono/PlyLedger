@@ -87,6 +87,9 @@ model PurchaseOrder {
   freightCost        Float            @default(0)
   handlingCost       Float            @default(0)
   documentationCost  Float            @default(0)
+  subTotal           Float            @default(0)
+  hasTax             Boolean          @default(false)
+  taxAmount          Float            @default(0)
   totalCost          Float            @default(0)
   status             POStatus         @default(DRAFT)
   createdAt          DateTime         @default(now())
@@ -110,7 +113,8 @@ model PurchaseItem {
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   productId       String
   product         Product       @relation(fields: [productId], references: [id])
-  quantity        Float
+  pallets         Int?
+  quantity        Float         // Treated as PCS
   unit            String        // e.g., cbm, sheets
   unitPrice       Float
   totalPrice      Float
@@ -129,6 +133,9 @@ model SalesOrder {
   exchangeRateId  String?
   exchangeRate    ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
   paymentTerms    PaymentTerm      @default(CASH)
+  subTotal        Float            @default(0)
+  hasTax          Boolean          @default(false)
+  taxAmount       Float            @default(0)
   totalAmount     Float            @default(0)
   status          SOStatus         @default(DRAFT)
   createdAt       DateTime         @default(now())
@@ -158,7 +165,8 @@ model SalesItem {
   salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   productId    String
   product      Product    @relation(fields: [productId], references: [id])
-  quantity     Float
+  pallets      Int?
+  quantity     Float      // Treated as PCS
   unit         String
   sellingPrice Float
   totalPrice   Float

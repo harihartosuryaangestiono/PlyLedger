@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { createPurchaseOrder } from "./actions";
 import { Plus, Printer, Download, Search } from "lucide-react";
 import Link from "next/link";
@@ -15,8 +16,9 @@ import Link from "next/link";
 export function PurchaseClient({ initialOrders, suppliers, products , readOnly }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState([{ productId: "", quantity: 1, unitPrice: 0, unit: "cbm" }]);
+  const [items, setItems] = useState([{ productId: "", pallets: "", quantity: 1, unitPrice: 0 }]);
   const [supplierId, setSupplierId] = useState("");
+  const [hasTax, setHasTax] = useState(false);
   const [filterThickness, setFilterThickness] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterSupplier, setFilterSupplier] = useState("all");
@@ -47,7 +49,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
       ...filteredOrders.map((po: any) => [
         `"${po.poNumber}"`, 
         `"${po.supplier.name}"`, 
-        `"${po.totalCost}"`, 
+        `"${po.totalAmount}"`, 
         `"${po.status}"`, 
         `"${new Date(po.createdAt).toLocaleDateString()}"`
       ])
@@ -63,7 +65,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     document.body.removeChild(link);
   };
 
-  const addItem = () => setItems([...items, { productId: "", quantity: 1, unitPrice: 0, unit: "cbm" }]);
+  const addItem = () => setItems([...items, { productId: "", pallets: "", quantity: 1, unitPrice: 0 }]);
   
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
@@ -77,7 +79,9 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     }
   };
 
-  const totalCost = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+  const subTotal = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+  const taxAmount = hasTax ? subTotal * 0.11 : 0;
+  const grandTotal = subTotal + taxAmount;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -88,10 +92,17 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
       poNumber: formData.get("poNumber") as string,
       supplierId: supplierId,
       currency: formData.get("currency") as string,
+      subTotal,
+      hasTax,
+      taxAmount,
+      totalAmount: grandTotal,
       items: items.map(i => ({
-        ...i,
+        productId: i.productId,
+        pallets: i.pallets ? Number(i.pallets) : null,
         quantity: Number(i.quantity),
-        unitPrice: Number(i.unitPrice)
+        unitPrice: Number(i.unitPrice),
+        unit: "pcs",
+        totalPrice: Number(i.quantity) * Number(i.unitPrice)
       }))
     });
     
@@ -165,7 +176,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
           {!readOnly && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create PO</Button>} />
-              <DialogContent className="sm:max-w-3xl w-full">
+              <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Purchase Order</DialogTitle>
                 </DialogHeader>
@@ -202,22 +213,31 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                     </div>
                     
                     <div className="space-y-3">
+                      <div className="grid grid-cols-[3fr_1fr_1fr_2fr_2fr_auto] gap-2 mb-2 px-2">
+                        <div className="text-xs font-semibold text-slate-500 uppercase">Product</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pallets</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">PCS</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Price/PCS</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Total</div>
+                        <div className="w-8"></div>
+                      </div>
                       {items.map((item, idx) => (
-                        <div key={idx} className="flex gap-2 items-center bg-white p-2 border rounded-md">
-                          <Select value={item.productId} onValueChange={(v) => updateItem(idx, "productId", v)}>
-                            <SelectTrigger className="flex-1 border-0 shadow-none"><SelectValue placeholder="Select product" /></SelectTrigger>
-                            <SelectContent>
-                              {products.map((p: any) => (
-                                <SelectItem key={p.id} value={p.id}>{p.name} ({p.thickness} {p.size})</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                          <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="w-20 border-0 shadow-none" />
-                          <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                          <Input placeholder="Unit" value={item.unit} onChange={(e) => updateItem(idx, "unit", e.target.value)} className="w-20 border-0 shadow-none" />
-                          <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                          <Input type="number" placeholder="Price" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", e.target.value)} className="w-24 border-0 shadow-none" />
+                        <div key={idx} className="grid grid-cols-[3fr_1fr_1fr_2fr_2fr_auto] gap-2 items-center bg-white p-2 border rounded-md">
+                          <SearchableSelect 
+                            options={products.map((p: any) => ({
+                              value: p.id,
+                              label: `${p.sku ? `[${p.sku}] ` : ''}${p.name} - ${p.type} ${p.grade} ${p.thickness} ${p.size}`
+                            }))}
+                            value={item.productId}
+                            onChange={(v) => updateItem(idx, "productId", v)}
+                            placeholder="Search product..."
+                          />
+                          <Input type="number" placeholder="0" value={item.pallets} onChange={(e) => updateItem(idx, "pallets", e.target.value)} className="text-center" />
+                          <Input type="number" placeholder="0" min="1" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="text-center" required />
+                          <Input type="number" placeholder="0" min="0" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", e.target.value)} className="text-right" required />
+                          <div className="text-right px-3 text-sm font-medium text-slate-700 bg-slate-50 border rounded-md h-9 flex items-center justify-end">
+                            {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString("id-ID")}
+                          </div>
                           <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} disabled={items.length === 1} className="text-slate-400 hover:text-red-500">
                             <span className="sr-only">Remove</span>
                             &times;
@@ -226,10 +246,31 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                       ))}
                     </div>
                     
-                    <div className="flex justify-end pt-2 border-t border-slate-200 mt-4">
-                      <div className="text-right">
-                        <span className="text-sm text-slate-500 mr-4">Calculated Total</span>
-                        <span className="text-lg font-bold text-slate-900">Rp {totalCost.toLocaleString("id-ID")}</span>
+                    <div className="pt-4 border-t border-slate-200 mt-4 space-y-2">
+                      <div className="flex justify-end items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
+                          <input type="checkbox" checked={hasTax} onChange={(e) => setHasTax(e.target.checked)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                          Include PPN (11%)
+                        </label>
+                      </div>
+                      
+                      <div className="flex justify-end">
+                        <div className="w-64 space-y-2 text-right">
+                          <div className="flex justify-between text-sm text-slate-500">
+                            <span>Subtotal:</span>
+                            <span>Rp {subTotal.toLocaleString("id-ID")}</span>
+                          </div>
+                          {hasTax && (
+                            <div className="flex justify-between text-sm text-slate-500">
+                              <span>PPN (11%):</span>
+                              <span>Rp {taxAmount.toLocaleString("id-ID")}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-lg font-bold text-slate-900 border-t pt-2">
+                            <span>Grand Total:</span>
+                            <span>Rp {grandTotal.toLocaleString("id-ID")}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -65,7 +65,7 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    await createProduct({
+    const result = await createProduct({
       sku: formData.get("sku") as string,
       name: formData.get("name") as string,
       type: type,
@@ -74,7 +74,12 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
       size: formData.get("size") as string,
     });
     setLoading(false);
-    setOpen(false);
+    
+    if (result.success) {
+      setOpen(false);
+    } else {
+      alert("Error: " + (result.error || "Gagal menambahkan produk. Coba mulai ulang (restart) server Next.js Anda (npm run dev) jika Anda baru saja memperbarui database."));
+    }
   }
 
   return (

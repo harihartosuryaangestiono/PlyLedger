@@ -40,9 +40,9 @@ export async function createProduct(data: { name: string; sku?: string; type: st
     });
     revalidatePath("/products");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create product:", error);
-    return { success: false, error: "Failed to create product" };
+    return { success: false, error: error?.message || "Failed to create product" };
   }
 }
 
