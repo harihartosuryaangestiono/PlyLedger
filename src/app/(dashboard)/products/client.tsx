@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createProduct, deleteProduct } from "./actions";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Download } from "lucide-react";
 
 type Product = {
   id: string;
@@ -24,6 +24,30 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState("MR");
   const [grade, setGrade] = useState("A");
+  const [filterThickness, setFilterThickness] = useState("all");
+
+  const uniqueThicknesses = Array.from(new Set(initialProducts.map((p) => p.thickness))).sort();
+
+  const filteredProducts = initialProducts.filter((p) => {
+    if (filterThickness !== "all" && p.thickness !== filterThickness) return false;
+    return true;
+  });
+
+  const handleExport = () => {
+    const csvContent = [
+      ["Name", "Type", "Grade", "Thickness", "Size"],
+      ...filteredProducts.map(p => [`"${p.name}"`, `"${p.type}"`, `"${p.grade}"`, `"${p.thickness}"`, `"${p.size}"`])
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `products_report_${filterThickness === 'all' ? 'all' : filterThickness}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,7 +72,20 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
           <p className="text-muted-foreground mt-1 text-sm">Manage plywood specifications and inventory items</p>
         </div>
         <div className="flex items-center gap-4">
-          <Input placeholder="Search products..." className="max-w-xs" />
+          <Select value={filterThickness} onValueChange={setFilterThickness}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All Thickness" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Thickness</SelectItem>
+              {uniqueThicknesses.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
           {!readOnly && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Product</Button>} />
@@ -130,14 +167,14 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialProducts.length === 0 ? (
+            {filteredProducts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                  No products found. Create one to get started.
+                  No products found.
                 </TableCell>
               </TableRow>
             ) : (
-              initialProducts.map((product, idx) => (
+              filteredProducts.map((product, idx) => (
                 <TableRow key={product.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8FAFC]/60'}>
                   <TableCell className="font-medium text-slate-900 py-3.5 border-b border-slate-100">{product.name}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{product.type}</TableCell>

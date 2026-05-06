@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { createPurchaseOrder } from "./actions";
-import { Plus, Printer } from "lucide-react";
+import { Plus, Printer, Download } from "lucide-react";
 import Link from "next/link";
 
 export function PurchaseClient({ initialOrders, suppliers, products , readOnly }: any) {
@@ -17,6 +17,41 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([{ productId: "", quantity: 1, unitPrice: 0, unit: "cbm" }]);
   const [supplierId, setSupplierId] = useState("");
+  const [filterThickness, setFilterThickness] = useState("all");
+
+  const uniqueThicknesses = Array.from(new Set(
+    initialOrders.flatMap((po: any) => po.items.map((i: any) => i.product?.thickness)).filter(Boolean)
+  )).sort() as string[];
+
+  const filteredOrders = initialOrders.filter((po: any) => {
+    if (filterThickness !== "all") {
+      const hasThickness = po.items.some((i: any) => i.product?.thickness === filterThickness);
+      if (!hasThickness) return false;
+    }
+    return true;
+  });
+
+  const handleExport = () => {
+    const csvContent = [
+      ["PO Number", "Supplier", "Total Cost", "Status", "Date"],
+      ...filteredOrders.map((po: any) => [
+        `"${po.poNumber}"`, 
+        `"${po.supplier.name}"`, 
+        `"${po.totalCost}"`, 
+        `"${po.status}"`, 
+        `"${new Date(po.createdAt).toLocaleDateString()}"`
+      ])
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `purchases_report_${filterThickness === 'all' ? 'all' : filterThickness}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const addItem = () => setItems([...items, { productId: "", quantity: 1, unitPrice: 0, unit: "cbm" }]);
   
@@ -72,7 +107,20 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
           <p className="text-muted-foreground mt-1 text-sm">Manage purchases and incoming inventory</p>
         </div>
         <div className="flex items-center gap-4">
-          <Input placeholder="Search PO..." className="max-w-xs" />
+          <Select value={filterThickness} onValueChange={setFilterThickness}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All Thickness" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Thickness</SelectItem>
+              {uniqueThicknesses.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
           {!readOnly && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create PO</Button>} />
@@ -167,14 +215,14 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialOrders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                   No purchase orders found.
                 </TableCell>
               </TableRow>
             ) : (
-              initialOrders.map((po: any, idx: number) => (
+              filteredOrders.map((po: any, idx: number) => (
                 <TableRow key={po.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8FAFC]/60'}>
                   <TableCell className="font-medium text-slate-900 py-3.5 border-b border-slate-100">{po.poNumber}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{po.supplier.name}</TableCell>

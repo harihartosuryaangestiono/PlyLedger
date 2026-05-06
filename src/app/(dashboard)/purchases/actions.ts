@@ -16,7 +16,7 @@ export async function getPurchaseOrders() {
     return await prisma.purchaseOrder.findMany({
       include: {
         supplier: true,
-        items: true,
+        items: { include: { product: true } },
       },
       orderBy: { createdAt: "desc" },
     });

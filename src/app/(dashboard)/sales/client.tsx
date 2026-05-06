@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { createSalesOrder } from "./actions";
-import { Plus, Printer } from "lucide-react";
+import { Plus, Printer, Download } from "lucide-react";
 import Link from "next/link";
 
 export function SalesClient({ initialOrders, customers, products , readOnly }: any) {
@@ -18,6 +18,42 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
   const [items, setItems] = useState([{ productId: "", quantity: 1, sellingPrice: 0, unit: "cbm" }]);
   const [customerId, setCustomerId] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("CASH");
+  const [filterThickness, setFilterThickness] = useState("all");
+
+  const uniqueThicknesses = Array.from(new Set(
+    initialOrders.flatMap((so: any) => so.items.map((i: any) => i.product?.thickness)).filter(Boolean)
+  )).sort() as string[];
+
+  const filteredOrders = initialOrders.filter((so: any) => {
+    if (filterThickness !== "all") {
+      const hasThickness = so.items.some((i: any) => i.product?.thickness === filterThickness);
+      if (!hasThickness) return false;
+    }
+    return true;
+  });
+
+  const handleExport = () => {
+    const csvContent = [
+      ["SO Number", "Customer", "Terms", "Total Amount", "Status", "Date"],
+      ...filteredOrders.map((so: any) => [
+        `"${so.soNumber}"`, 
+        `"${so.customer.name}"`, 
+        `"${so.paymentTerms}"`, 
+        `"${so.totalAmount}"`, 
+        `"${so.status}"`, 
+        `"${new Date(so.createdAt).toLocaleDateString()}"`
+      ])
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `sales_report_${filterThickness === 'all' ? 'all' : filterThickness}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const addItem = () => setItems([...items, { productId: "", quantity: 1, sellingPrice: 0, unit: "cbm" }]);
   
@@ -74,7 +110,20 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
           <p className="text-muted-foreground mt-1 text-sm">Manage customer orders and revenue</p>
         </div>
         <div className="flex items-center gap-4">
-          <Input placeholder="Search SO..." className="max-w-xs" />
+          <Select value={filterThickness} onValueChange={setFilterThickness}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All Thickness" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Thickness</SelectItem>
+              {uniqueThicknesses.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
           {!readOnly && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create SO</Button>} />
@@ -181,14 +230,14 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialOrders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                   No sales orders found.
                 </TableCell>
               </TableRow>
             ) : (
-              initialOrders.map((so: any, idx: number) => (
+              filteredOrders.map((so: any, idx: number) => (
                 <TableRow key={so.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8FAFC]/60'}>
                   <TableCell className="font-medium text-slate-900 py-3.5 border-b border-slate-100">{so.soNumber}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{so.customer.name}</TableCell>
