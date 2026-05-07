@@ -31,6 +31,11 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   const [filterSupplier, setFilterSupplier] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const numberInputClass =
+    "h-9 text-center tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  const moneyInputClass =
+    "h-9 text-right tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
   const uniqueThicknesses = Array.from(new Set(
     initialOrders.flatMap((po: any) => po.items.map((i: any) => i.product?.thickness)).filter(Boolean)
   )).sort() as string[];
@@ -49,6 +54,9 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     }
     return true;
   });
+
+  const selectedSupplierName =
+    suppliers?.find((s: any) => s.id === supplierId)?.name || "";
 
   const handleExport = () => {
     const csvContent = [
@@ -233,7 +241,13 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                       <div className="space-y-2">
                         <Label>Supplier</Label>
                         <Select value={supplierId} onValueChange={(v) => setSupplierId(v || "")}>
-                          <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                          <SelectTrigger>
+                            <span
+                              className={`flex flex-1 text-left ${!selectedSupplierName ? "text-muted-foreground" : ""}`}
+                            >
+                              {selectedSupplierName || "Select supplier"}
+                            </span>
+                          </SelectTrigger>
                           <SelectContent>
                             {suppliers.map((s: any) => (
                               <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -255,16 +269,19 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                     </div>
                     
                     <div className="space-y-3">
-                      <div className="grid grid-cols-[3fr_1fr_1fr_2fr_2fr_auto] gap-2 mb-2 px-2">
+                      <div className="grid grid-cols-[minmax(280px,1fr)_88px_72px_140px_140px_32px] gap-2 mb-2 px-2">
                         <div className="text-xs font-semibold text-slate-500 uppercase">Nama Barang</div>
                         <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pallet</div>
                         <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pcs</div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Harga Per Pcs</div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Jumlah</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right pr-1">Harga / Pcs</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right pr-1">Jumlah</div>
                         <div className="w-8"></div>
                       </div>
                       {items.map((item, idx) => (
-                        <div key={idx} className="grid grid-cols-[3fr_1fr_1fr_2fr_2fr_auto] gap-2 items-center bg-white p-2 border rounded-md">
+                        <div
+                          key={idx}
+                          className="grid grid-cols-[minmax(280px,1fr)_88px_72px_140px_140px_32px] gap-2 items-center bg-white p-2 border rounded-md"
+                        >
                           <SearchableSelect 
                             options={products.map((p: any) => ({
                               value: p.id,
@@ -274,9 +291,34 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                             onChange={(v) => updateItem(idx, "productId", v)}
                             placeholder="Cari nama atau SKU barang..."
                           />
-                          <Input type="number" placeholder="0" value={item.pallets} onChange={(e) => updateItem(idx, "pallets", e.target.value)} className="text-center" />
-                          <Input type="number" placeholder="0" min="1" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="text-center" required />
-                          <Input type="number" placeholder="0" min="0" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", e.target.value)} className="text-right" required />
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={item.pallets}
+                            onChange={(e) => updateItem(idx, "pallets", e.target.value)}
+                            className={numberInputClass}
+                          />
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="0"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                            className={numberInputClass}
+                            required
+                          />
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="0"
+                            min="0"
+                            value={item.unitPrice}
+                            onChange={(e) => updateItem(idx, "unitPrice", e.target.value)}
+                            className={moneyInputClass}
+                            required
+                          />
                           <div className="text-right px-3 text-sm font-medium text-slate-700 bg-slate-50 border rounded-md h-9 flex items-center justify-end">
                             {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString("id-ID")}
                           </div>

@@ -19,6 +19,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   auditLogs AuditLog[]
+  bankImportBatches BankImportBatch[]
 }
 
 enum Role {
@@ -217,6 +218,7 @@ model Invoice {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   payments        Payment[]
+  bankTransactions BankTransaction[]
 }
 
 enum InvoiceType {
@@ -286,4 +288,67 @@ model AuditLog {
   entityId    String
   details     String   // JSON string of changes
   createdAt   DateTime @default(now())
+}
+
+// ==============================
+// Bank Mutations / Bookkeeping
+// ==============================
+
+model BankImportBatch {
+  id          String            @id @default(uuid())
+  accountName String
+  fileName    String
+  fileHash    String            @unique
+  importedAt  DateTime          @default(now())
+  createdById String?
+  createdBy   User?             @relation(fields: [createdById], references: [id])
+  transactions BankTransaction[]
+
+  @@index([accountName, importedAt])
+}
+
+model BankCategory {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  isSystem  Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  transactions BankTransaction[]
+}
+
+enum BankTxnStatus {
+  UNMATCHED
+  MATCHED
+  RECONCILED
+  IGNORED
+}
+
+model BankTransaction {
+  id            String          @id @default(uuid())
+  importBatchId String
+  importBatch   BankImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+
+  txnDate       DateTime
+  description   String
+  debit         Float           @default(0)
+  credit        Float           @default(0)
+  balance       Float?
+
+  notes         String?
+  status        BankTxnStatus   @default(UNMATCHED)
+
+  categoryId    String?
+  category      BankCategory?   @relation(fields: [categoryId], references: [id])
+
+  matchedInvoiceId String?
+  matchedInvoice   Invoice?     @relation(fields: [matchedInvoiceId], references: [id])
+
+  fingerprint   String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([importBatchId, fingerprint])
+  @@index([txnDate])
+  @@index([status])
+  @@index([matchedInvoiceId])
 }

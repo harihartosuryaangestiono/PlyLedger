@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Box, ShoppingCart, TrendingUp, Truck, DollarSign, BookOpen } from 'lucide-react';
+import { Home, Users, Box, ShoppingCart, TrendingUp, Truck, DollarSign, BookOpen, Landmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { hasAccess, ModuleName } from '@/lib/permissions';
@@ -22,6 +22,7 @@ const navigation = [
   { name: 'Sales (SO)', href: '/sales', icon: TrendingUp, module: 'sales' },
   { name: 'Shipments', href: '/shipments', icon: Truck, module: 'shipments' },
   { name: 'Payments', href: '/payments', icon: DollarSign, module: 'payments' },
+  { name: 'Bookkeeping', href: '/bookkeeping', icon: Landmark, module: 'bookkeeping' },
   { name: 'Accounting', href: '/accounting', icon: BookOpen, module: 'accounting' },
 ];
 

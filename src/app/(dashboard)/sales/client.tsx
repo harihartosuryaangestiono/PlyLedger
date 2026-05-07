@@ -51,6 +51,9 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
     return true;
   });
 
+  const selectedCustomerName =
+    customers?.find((c: any) => c.id === customerId)?.name || "";
+
   const handleExport = () => {
     const csvContent = [
       ["SO Number", "Customer", "Terms", "Total Amount", "Status", "Date"],
@@ -237,7 +240,13 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                       <div className="space-y-2">
                         <Label>Customer</Label>
                         <Select value={customerId} onValueChange={(v) => setCustomerId(v || "")}>
-                          <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                          <SelectTrigger>
+                            <span
+                              className={`flex flex-1 text-left ${!selectedCustomerName ? "text-muted-foreground" : ""}`}
+                            >
+                              {selectedCustomerName || "Select customer"}
+                            </span>
+                          </SelectTrigger>
                           <SelectContent>
                             {customers.map((c: any) => (
                               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>

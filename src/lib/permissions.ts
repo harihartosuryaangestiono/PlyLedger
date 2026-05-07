@@ -2,24 +2,24 @@ import { Role } from "@prisma/client";
 
 export const RolePermissions = {
   [Role.ADMIN]: {
-    canAccess: ["dashboard", "sales", "purchases", "accounting", "products", "customers", "suppliers", "shipments", "payments", "users"],
+    canAccess: ["dashboard", "sales", "purchases", "accounting", "products", "customers", "suppliers", "shipments", "payments", "bookkeeping", "users"],
     canMutate: true,
   },
   [Role.SALES]: {
-    canAccess: ["dashboard", "sales", "customers", "products", "shipments"],
+    canAccess: ["dashboard", "sales", "customers", "products", "shipments", "bookkeeping"],
     canMutate: true, // Only for the accessible modules, enforced at the API level
   },
   [Role.FINANCE]: {
-    canAccess: ["dashboard", "accounting", "payments", "customers", "suppliers"],
+    canAccess: ["dashboard", "accounting", "payments", "bookkeeping", "customers", "suppliers"],
     canMutate: true,
   },
   [Role.VIEWER]: {
-    canAccess: ["dashboard", "sales", "purchases", "accounting", "products", "customers", "suppliers", "shipments", "payments", "users"],
+    canAccess: ["dashboard", "sales", "purchases", "accounting", "products", "customers", "suppliers", "shipments", "payments", "bookkeeping", "users"],
     canMutate: false,
   },
 } as const;
 
-export type ModuleName = "dashboard" | "sales" | "purchases" | "accounting" | "products" | "customers" | "suppliers" | "shipments" | "payments" | "users";
+export type ModuleName = "dashboard" | "sales" | "purchases" | "accounting" | "products" | "customers" | "suppliers" | "shipments" | "payments" | "bookkeeping" | "users";
 
 export function hasAccess(role: string, module: ModuleName): boolean {
   if (!role) return false;

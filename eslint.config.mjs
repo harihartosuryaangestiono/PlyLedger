@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local tool recovery / scripts (not runtime app code):
+    ".gemini/**",
+    "seed-users.js",
   ]),
 ]);
 
