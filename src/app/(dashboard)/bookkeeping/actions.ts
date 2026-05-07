@@ -8,11 +8,14 @@ import crypto from "crypto";
 import { BankTxnStatus, Prisma } from "@prisma/client";
 
 type ImportRow = {
+  orderNo?: number | null;
   txnDate: string; // ISO date string (YYYY-MM-DD)
   description: string;
+  branch?: string | null;
   debit: number;
   credit: number;
   balance?: number | null;
+  invoiceNumber?: string | null;
 };
 
 const DEFAULT_CATEGORIES = [
@@ -41,8 +44,10 @@ function toNumber(n: unknown) {
 
 function computeFingerprint(r: ImportRow) {
   const base = [
+    r.orderNo == null ? "" : String(r.orderNo),
     r.txnDate,
     normalizeText(r.description).toLowerCase(),
+    r.branch == null ? "" : normalizeText(r.branch).toLowerCase(),
     String(Math.round(toNumber(r.debit) * 100) / 100),
     String(Math.round(toNumber(r.credit) * 100) / 100),
     r.balance == null ? "" : String(Math.round(toNumber(r.balance) * 100) / 100),
@@ -203,11 +208,14 @@ export async function importBankMutation(data: {
 
   const normalizedRows: ImportRow[] = data.rows
     .map((r) => ({
+      orderNo: r.orderNo == null ? null : Number(r.orderNo) || null,
       txnDate: r.txnDate,
       description: normalizeText(r.description),
+      branch: r.branch == null ? null : normalizeText(r.branch),
       debit: Math.max(0, toNumber(r.debit)),
       credit: Math.max(0, toNumber(r.credit)),
       balance: r.balance == null ? null : toNumber(r.balance),
+      invoiceNumber: r.invoiceNumber == null ? null : normalizeText(r.invoiceNumber),
     }))
     .filter((r) => r.txnDate && r.description && (r.debit > 0 || r.credit > 0));
 
@@ -260,19 +268,31 @@ export async function importBankMutation(data: {
       const fingerprint = computeFingerprint(r);
       const suggested = suggestCategory(r.description);
       const categoryId = suggested ? categoryByName.get(suggested) : undefined;
+      const matchedInvoiceId = r.invoiceNumber
+        ? (
+            await prisma.invoice.findFirst({
+              where: { invoiceNumber: r.invoiceNumber },
+              select: { id: true },
+            })
+          )?.id
+        : undefined;
 
       try {
         await bankTransaction.create({
           data: {
             importBatchId: batch.id,
+            orderNo: r.orderNo ?? null,
             txnDate: new Date(r.txnDate),
             description: r.description,
+            branch: r.branch ?? null,
             debit: r.debit,
             credit: r.credit,
             balance: r.balance ?? null,
             fingerprint,
             categoryId,
-          },
+            matchedInvoiceId,
+            status: matchedInvoiceId ? "MATCHED" : undefined,
+          } as any,
         });
         inserted++;
       } catch {
@@ -352,6 +372,138 @@ export async function createCategory(name: string) {
     return { success: true };
   } catch {
     return { success: false, error: "Failed to create category" };
+  }
+}
+
+export async function createManualBankTransaction(data: {
+  accountName?: string;
+  orderNo?: number | null;
+  txnDate: string; // YYYY-MM-DD
+  description: string;
+  branch?: string | null;
+  amount: number; // positive = credit, negative = debit
+  balance?: number | null;
+  invoiceNumber?: string | null;
+}) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "bookkeeping")) {
+    throw new Error("Unauthorized");
+  }
+
+  const { bankImportBatch, bankTransaction, isReady } = getBookkeepingDelegates();
+  if (!isReady || !bankImportBatch || !bankTransaction) {
+    return {
+      success: false,
+      error:
+        "Bookkeeping tables are not ready yet. Jalankan: npx prisma db push lalu restart dev server.",
+    };
+  }
+
+  const accountName = normalizeText(data.accountName || "MANUAL");
+  const txnDate = normalizeText(data.txnDate);
+  const description = normalizeText(data.description);
+  const branch = data.branch == null ? null : normalizeText(data.branch);
+  const amount = toNumber(data.amount);
+  const balance = data.balance == null ? null : toNumber(data.balance);
+  const orderNo = data.orderNo == null ? null : Number(data.orderNo) || null;
+  const invoiceNumber = data.invoiceNumber == null ? null : normalizeText(data.invoiceNumber);
+
+  if (!txnDate) return { success: false, error: "Tanggal wajib diisi" };
+  if (!description) return { success: false, error: "Keterangan wajib diisi" };
+  if (!amount || !Number.isFinite(amount)) return { success: false, error: "Jumlah wajib diisi" };
+
+  const debit = amount < 0 ? Math.abs(amount) : 0;
+  const credit = amount > 0 ? amount : 0;
+
+  const manualHash = crypto
+    .createHash("sha256")
+    .update(`manual|${accountName}`)
+    .digest("hex");
+
+  const batch =
+    (await bankImportBatch.findUnique({ where: { fileHash: manualHash } })) ??
+    (await bankImportBatch.create({
+      data: {
+        accountName,
+        fileName: "Manual Entry",
+        fileHash: manualHash,
+        createdById: session?.user?.id,
+      },
+    }));
+
+  const matchedInvoiceId = invoiceNumber
+    ? (
+        await prisma.invoice.findFirst({
+          where: { invoiceNumber },
+          select: { id: true },
+        })
+      )?.id
+    : null;
+
+  const fingerprint = computeFingerprint({
+    orderNo,
+    txnDate,
+    description,
+    branch,
+    debit,
+    credit,
+    balance,
+  });
+
+  try {
+    const created = await bankTransaction.create({
+      data: {
+        importBatchId: batch.id,
+        orderNo,
+        txnDate: new Date(txnDate),
+        description,
+        branch,
+        debit,
+        credit,
+        balance,
+        fingerprint,
+        matchedInvoiceId: matchedInvoiceId ?? null,
+        status: matchedInvoiceId ? "MATCHED" : "UNMATCHED",
+      } as any,
+      include: { category: true, importBatch: true, matchedInvoice: true },
+    });
+    revalidatePath("/bookkeeping");
+    return { success: true, txn: created };
+  } catch {
+    return { success: false, error: "Gagal menambahkan transaksi" };
+  }
+}
+
+export async function setTransactionChecked(data: { id: string; checked: boolean }) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (role !== "ADMIN") {
+    throw new Error("Unauthorized");
+  }
+
+  const { bankTransaction, isReady } = getBookkeepingDelegates();
+  if (!isReady || !bankTransaction) {
+    return {
+      success: false,
+      error:
+        "Bookkeeping tables are not ready yet. Jalankan: npx prisma db push lalu restart dev server.",
+    };
+  }
+
+  try {
+    await bankTransaction.update({
+      where: { id: data.id },
+      data: {
+        adminChecked: data.checked,
+        checkedAt: data.checked ? new Date() : null,
+        checkedById: data.checked ? session?.user?.id : null,
+      } as any,
+    });
+    revalidatePath("/bookkeeping");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Failed to update checklist" };
   }
 }
 

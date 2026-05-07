@@ -14,8 +14,10 @@ import Papa from "papaparse";
 
 import {
   createCategory,
+  createManualBankTransaction,
   getInvoicesForMatching,
   importBankMutation,
+  setTransactionChecked,
   updateTransaction,
 } from "./actions";
 
@@ -33,24 +35,30 @@ type Invoice = {
 
 type Txn = {
   id: string;
+  orderNo?: number | null;
   txnDate: string | Date;
   description: string;
+  branch?: string | null;
   debit: number;
   credit: number;
   balance: number | null;
   notes: string | null;
   status: "UNMATCHED" | "MATCHED" | "RECONCILED" | "IGNORED";
+  adminChecked?: boolean;
   category: Category | null;
   importBatch: ImportBatch;
   matchedInvoice: Invoice | null;
 };
 
 type ImportRow = {
+  orderNo?: number | null;
   txnDate: string; // YYYY-MM-DD
   description: string;
+  branch?: string | null;
   debit: number;
   credit: number;
   balance?: number | null;
+  invoiceNumber?: string | null;
 };
 
 function formatIDR(n: number) {
@@ -119,11 +127,13 @@ function computeDedupeKey(r: ImportRow) {
 
 export function BookkeepingClient({
   readOnly,
+  canChecklist,
   initialTransactions,
   categories,
   latestBatches,
 }: {
   readOnly: boolean;
+  canChecklist: boolean;
   initialTransactions: Txn[];
   categories: Category[];
   latestBatches: ImportBatch[];
@@ -144,6 +154,16 @@ export function BookkeepingClient({
   const [fileName, setFileName] = useState<string>("");
   const [importRows, setImportRows] = useState<ImportRow[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
+
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualOrderNo, setManualOrderNo] = useState("");
+  const [manualDate, setManualDate] = useState("");
+  const [manualDesc, setManualDesc] = useState("");
+  const [manualBranch, setManualBranch] = useState("");
+  const [manualAmount, setManualAmount] = useState("");
+  const [manualBalance, setManualBalance] = useState("");
+  const [manualInvoice, setManualInvoice] = useState("");
 
   const [editOpen, setEditOpen] = useState(false);
   const [editTxn, setEditTxn] = useState<Txn | null>(null);
@@ -340,10 +360,12 @@ export function BookkeepingClient({
 
   function parseCsv(file: File) {
     return new Promise<ImportRow[]>((resolve, reject) => {
-      Papa.parse(file, {
+      Papa.parse(
+        file as any,
+        {
         header: true,
         skipEmptyLines: true,
-        complete: (result) => {
+        complete: (result: Papa.ParseResult<Record<string, unknown>>) => {
           try {
             const raw = result.data as Record<string, unknown>[];
             if (!raw.length) return resolve([]);
@@ -356,28 +378,33 @@ export function BookkeepingClient({
               return "";
             };
 
-            const rows = raw.map((r) => {
+            const rows = raw.map((r, idx) => {
               const date = pick(r, ["date", "tanggal", "trx date", "transaction date"]);
               const desc = pick(r, ["description", "keterangan", "uraian", "deskripsi", "remark", "memo"]);
               const debit = pick(r, ["debit", "db", "debet", "out"]);
               const credit = pick(r, ["credit", "cr", "kredit", "in"]);
+              const branch = pick(r, ["cabang", "branch"]);
+              const amount = pick(r, ["jumlah", "amount", "mutasi", "nominal"]);
               const bal = pick(r, ["balance", "saldo"]);
+              const invoiceNumber = pick(r, ["invoice", "faktur", "no invoice"]);
 
               const d = toISODate(date);
               const db = toNum(debit);
               const cr = toNum(credit);
+              const a = toNum(amount);
 
-              // If debit/credit missing but amount exists, infer sign if possible
-              const inferredDebit = db > 0 ? db : 0;
-              const inferredCredit = cr > 0 ? cr : 0;
+              const inferredDebit = db > 0 ? db : a < 0 ? Math.abs(a) : 0;
+              const inferredCredit = cr > 0 ? cr : a > 0 ? a : 0;
 
               return {
+                orderNo: idx + 1,
                 txnDate: d,
                 description: String(desc || "").trim(),
+                branch: String(branch || "").trim() || null,
                 debit: inferredDebit || 0,
                 credit: inferredCredit || 0,
                 balance: bal === "" || bal == null ? null : toNum(bal),
-                // if both missing but amount present, leave as 0 and let validation catch
+                invoiceNumber: String(invoiceNumber || "").trim() || null,
               } satisfies ImportRow;
             });
 
@@ -386,8 +413,9 @@ export function BookkeepingClient({
             reject(e);
           }
         },
-        error: (err) => reject(err),
-      });
+          error: (err: Papa.ParseError) => reject(err),
+        } as any
+      );
     });
   }
 
@@ -411,23 +439,30 @@ export function BookkeepingClient({
             return "";
           };
 
-          const rows = json.map((r) => {
+          const rows = json.map((r, idx) => {
             const date = pick(r, ["date", "tanggal", "trx date", "transaction date"]);
             const desc = pick(r, ["description", "keterangan", "uraian", "deskripsi", "remark", "memo"]);
             const debit = pick(r, ["debit", "db", "debet", "out"]);
             const credit = pick(r, ["credit", "cr", "kredit", "in"]);
+            const branch = pick(r, ["cabang", "branch"]);
+            const amount = pick(r, ["jumlah", "amount", "mutasi", "nominal"]);
             const bal = pick(r, ["balance", "saldo"]);
+            const invoiceNumber = pick(r, ["invoice", "faktur", "no invoice"]);
 
             const d = toISODate(date);
             const db = toNum(debit);
             const cr = toNum(credit);
+            const a = toNum(amount);
 
             return {
+              orderNo: idx + 1,
               txnDate: d,
               description: String(desc || "").trim(),
+              branch: String(branch || "").trim() || null,
               debit: db > 0 ? db : 0,
               credit: cr > 0 ? cr : 0,
               balance: bal === "" || bal == null ? null : toNum(bal),
+              invoiceNumber: String(invoiceNumber || "").trim() || null,
             } satisfies ImportRow;
           });
 
@@ -438,11 +473,14 @@ export function BookkeepingClient({
               const date = pick(r, ["date", "tanggal", "trx date", "transaction date"]);
               const desc = pick(r, ["description", "keterangan", "uraian", "deskripsi", "remark", "memo"]);
               const amount = pick(r, ["amount", "mutasi", "nominal"]);
+              const branch = pick(r, ["cabang", "branch"]);
               const bal = pick(r, ["balance", "saldo"]);
               const a = toNum(amount);
               return {
+                orderNo: null,
                 txnDate: toISODate(date),
                 description: String(desc || "").trim(),
+                branch: String(branch || "").trim() || null,
                 debit: a < 0 ? Math.abs(a) : 0,
                 credit: a > 0 ? a : 0,
                 balance: bal === "" || bal == null ? null : toNum(bal),
@@ -460,6 +498,57 @@ export function BookkeepingClient({
       reader.onerror = () => reject(new Error("Failed to read file"));
       reader.readAsArrayBuffer(file);
     });
+  }
+
+  async function toggleChecklist(t: Txn, checked: boolean) {
+    // Optimistic UI update
+    setTxns((prev) => prev.map((p) => (p.id === t.id ? { ...p, adminChecked: checked } : p)));
+    try {
+      const res = await setTransactionChecked({ id: t.id, checked });
+      if (!res?.success) throw new Error(res?.error || "Failed");
+    } catch (e: any) {
+      // rollback
+      setTxns((prev) => prev.map((p) => (p.id === t.id ? { ...p, adminChecked: !checked } : p)));
+      alert("Error: " + (e?.message || "Failed to update checklist"));
+    }
+  }
+
+  async function saveManual() {
+    if (readOnly) return;
+    setManualSaving(true);
+    try {
+      const amount = toNum(manualAmount);
+      const bal = manualBalance.trim() ? toNum(manualBalance) : null;
+      const orderNo = manualOrderNo.trim() ? Number(manualOrderNo) : null;
+
+      const res = await createManualBankTransaction({
+        accountName,
+        orderNo: orderNo && Number.isFinite(orderNo) ? orderNo : null,
+        txnDate: manualDate,
+        description: manualDesc,
+        branch: manualBranch.trim() ? manualBranch.trim() : null,
+        amount,
+        balance: bal,
+        invoiceNumber: manualInvoice.trim() ? manualInvoice.trim() : null,
+      });
+      if (!res?.success) {
+        alert("Error: " + (res?.error || "Failed to save"));
+        return;
+      }
+      if (res.txn) {
+        setTxns((prev) => [res.txn as unknown as Txn, ...prev]);
+      }
+      setManualOpen(false);
+      setManualOrderNo("");
+      setManualDate("");
+      setManualDesc("");
+      setManualBranch("");
+      setManualAmount("");
+      setManualBalance("");
+      setManualInvoice("");
+    } finally {
+      setManualSaving(false);
+    }
   }
 
   async function onFileSelected(file: File) {
@@ -557,7 +646,7 @@ export function BookkeepingClient({
             />
           </div>
 
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v || "all")}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
@@ -598,9 +687,14 @@ export function BookkeepingClient({
           </Button>
 
           {!readOnly && (
-            <Button onClick={() => setImportOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" /> Import Mutation
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setManualOpen(true)}>
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Input Manual
+              </Button>
+              <Button onClick={() => setImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" /> Import Mutation
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -609,13 +703,14 @@ export function BookkeepingClient({
         <Table>
           <TableHeader className="bg-[#F8FAFC] sticky top-0 border-b border-slate-200">
             <TableRow className="border-none">
-              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Txn ID</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Date</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Description</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Category</TableHead>
-              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Debit</TableHead>
-              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Credit</TableHead>
-              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Balance</TableHead>
+              <TableHead className="w-10" />
+              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">#Order</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Tanggal</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Keterangan</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Cabang</TableHead>
+              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Jumlah</TableHead>
+              <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Saldo</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Invoice</TableHead>
               <TableHead className="text-xs font-semibold text-slate-900 py-3 uppercase">Status</TableHead>
               <TableHead className="text-right text-xs font-semibold text-slate-900 py-3 uppercase">Action</TableHead>
             </TableRow>
@@ -623,15 +718,27 @@ export function BookkeepingClient({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-10 text-slate-500">
+                <TableCell colSpan={10} className="text-center py-10 text-slate-500">
                   No transactions found.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((t, idx) => (
                 <TableRow key={t.id} className={idx % 2 === 0 ? "bg-white" : "bg-[#F8FAFC]/60"}>
-                  <TableCell className="font-mono text-xs text-slate-500 py-3.5 border-b border-slate-100">
-                    {t.id.slice(0, 8)}
+                  <TableCell className="py-3.5 border-b border-slate-100">
+                    {canChecklist ? (
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-blue-600"
+                        checked={Boolean(t.adminChecked)}
+                        disabled={readOnly}
+                        onChange={(e) => toggleChecklist(t, e.target.checked)}
+                        title="Checklist (Admin)"
+                      />
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="text-slate-700 py-3.5 border-b border-slate-100">
+                    {t.orderNo ?? filtered.length - idx}
                   </TableCell>
                   <TableCell className="text-slate-700 py-3.5 border-b border-slate-100">
                     {new Date(t.txnDate).toLocaleDateString("id-ID")}
@@ -640,25 +747,35 @@ export function BookkeepingClient({
                     <div className="font-medium text-slate-900 line-clamp-2">{t.description}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {t.importBatch?.accountName} • {t.importBatch?.fileName}
-                      {t.matchedInvoice?.invoiceNumber ? (
-                        <span className="ml-2 inline-flex items-center gap-1 text-blue-700">
-                          <Link2 className="h-3.5 w-3.5" />
-                          {t.matchedInvoice.invoiceNumber}
-                        </span>
-                      ) : null}
                     </div>
                   </TableCell>
                   <TableCell className="text-slate-700 py-3.5 border-b border-slate-100">
-                    {t.category?.name || <span className="text-slate-400">—</span>}
+                    {t.branch ? t.branch : <span className="text-slate-400">—</span>}
                   </TableCell>
-                  <TableCell className="text-right font-medium text-slate-900 py-3.5 border-b border-slate-100">
-                    {t.debit ? `Rp ${formatIDR(t.debit)}` : "—"}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-slate-900 py-3.5 border-b border-slate-100">
-                    {t.credit ? `Rp ${formatIDR(t.credit)}` : "—"}
+                  <TableCell className="text-right font-medium py-3.5 border-b border-slate-100">
+                    {(() => {
+                      const amount = (t.credit || 0) - (t.debit || 0);
+                      const isOut = amount < 0;
+                      const abs = Math.abs(amount);
+                      return (
+                        <span className={isOut ? "text-red-700" : "text-emerald-700"}>
+                          {amount === 0 ? "—" : `${isOut ? "-" : ""}Rp ${formatIDR(abs)}`}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right text-slate-700 py-3.5 border-b border-slate-100">
                     {t.balance != null ? `Rp ${formatIDR(t.balance)}` : "—"}
+                  </TableCell>
+                  <TableCell className="py-3.5 border-b border-slate-100">
+                    {t.matchedInvoice?.invoiceNumber ? (
+                      <span className="inline-flex items-center gap-1 text-blue-700">
+                        <Link2 className="h-3.5 w-3.5" />
+                        {t.matchedInvoice.invoiceNumber}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="py-3.5 border-b border-slate-100">{getStatusBadge(t.status)}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">
@@ -693,6 +810,81 @@ export function BookkeepingClient({
           </TableBody>
         </Table>
       </div>
+
+      {/* Manual Input Dialog */}
+      <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+        <DialogContent className="sm:max-w-3xl w-full">
+          <DialogHeader>
+            <DialogTitle>Input Manual Mutasi</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>#Order (opsional)</Label>
+                <Input
+                  type="number"
+                  placeholder="mis. 1"
+                  value={manualOrderNo}
+                  onChange={(e) => setManualOrderNo(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tanggal</Label>
+                <Input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Keterangan</Label>
+                <Input
+                  placeholder="mis. TRF DARI ... / BIAYA ADMIN"
+                  value={manualDesc}
+                  onChange={(e) => setManualDesc(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cabang</Label>
+                <Input placeholder="mis. KCU ..." value={manualBranch} onChange={(e) => setManualBranch(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Jumlah (isi minus untuk debit)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="mis. -150000 atau 250000"
+                  value={manualAmount}
+                  onChange={(e) => setManualAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Saldo (opsional)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="mis. 10000000"
+                  value={manualBalance}
+                  onChange={(e) => setManualBalance(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Invoice (opsional)</Label>
+                <Input
+                  placeholder="mis. INV-SO-..."
+                  value={manualInvoice}
+                  onChange={(e) => setManualInvoice(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setManualOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={saveManual} disabled={manualSaving || readOnly}>
+                {manualSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Dialog */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
@@ -746,26 +938,41 @@ export function BookkeepingClient({
                   <Table>
                     <TableHeader className="bg-[#F8FAFC] sticky top-0">
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Debit</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
+                        <TableHead className="w-16">#</TableHead>
+                        <TableHead>Tanggal</TableHead>
+                        <TableHead>Keterangan</TableHead>
+                        <TableHead>Cabang</TableHead>
+                        <TableHead className="text-right">Jumlah</TableHead>
+                        <TableHead className="text-right">Saldo</TableHead>
+                        <TableHead>Invoice</TableHead>
                         <TableHead>Check</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {importRows.slice(0, 50).map((r, idx) => {
                         const ok = !!(r.txnDate && r.description && (r.debit > 0 || r.credit > 0));
+                        const amount = (r.credit || 0) - (r.debit || 0);
+                        const isOut = amount < 0;
+                        const abs = Math.abs(amount);
                         return (
                           <TableRow key={idx}>
+                            <TableCell className="text-slate-700">{r.orderNo ?? idx + 1}</TableCell>
                             <TableCell className="font-medium">{r.txnDate}</TableCell>
                             <TableCell className="max-w-[520px]">
                               <div className="line-clamp-2">{r.description}</div>
                             </TableCell>
-                            <TableCell className="text-right">{r.debit ? `Rp ${formatIDR(r.debit)}` : "—"}</TableCell>
-                            <TableCell className="text-right">{r.credit ? `Rp ${formatIDR(r.credit)}` : "—"}</TableCell>
+                            <TableCell>{r.branch || "—"}</TableCell>
+                            <TableCell className="text-right">
+                              {amount === 0 ? (
+                                "—"
+                              ) : (
+                                <span className={isOut ? "text-red-700" : "text-emerald-700"}>
+                                  {`${isOut ? "-" : ""}Rp ${formatIDR(abs)}`}
+                                </span>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">{r.balance != null ? `Rp ${formatIDR(r.balance)}` : "—"}</TableCell>
+                            <TableCell>{r.invoiceNumber || "—"}</TableCell>
                             <TableCell>
                               {ok ? (
                                 <span className="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
@@ -829,7 +1036,7 @@ export function BookkeepingClient({
               </div>
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select value={editCategoryId} onValueChange={setEditCategoryId}>
+                <Select value={editCategoryId} onValueChange={(v) => setEditCategoryId(v || "none")}>
                   <SelectTrigger>
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>

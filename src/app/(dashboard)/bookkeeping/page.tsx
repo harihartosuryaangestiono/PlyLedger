@@ -13,6 +13,7 @@ export default async function BookkeepingPage() {
     redirect("/access-denied");
   }
   const isReadOnly = !canEdit(role, "bookkeeping");
+  const canChecklist = role === "ADMIN";
 
   const [{ categories, latestBatches }, txns] = await Promise.all([
     getBookkeepingOverview(),
@@ -30,6 +31,7 @@ export default async function BookkeepingPage() {
 
       <BookkeepingClient
         readOnly={isReadOnly}
+        canChecklist={canChecklist}
         initialTransactions={txns}
         categories={categories}
         latestBatches={latestBatches}

@@ -20,6 +20,7 @@ model User {
   updatedAt DateTime @updatedAt
   auditLogs AuditLog[]
   bankImportBatches BankImportBatch[]
+  checkedBankTransactions BankTransaction[] @relation("BankTxnCheckedBy")
 }
 
 enum Role {
@@ -328,14 +329,21 @@ model BankTransaction {
   importBatchId String
   importBatch   BankImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
 
+  orderNo       Int?
   txnDate       DateTime
   description   String
+  branch        String?
   debit         Float           @default(0)
   credit        Float           @default(0)
   balance       Float?
 
   notes         String?
   status        BankTxnStatus   @default(UNMATCHED)
+
+  adminChecked  Boolean         @default(false)
+  checkedAt     DateTime?
+  checkedById   String?
+  checkedBy     User?           @relation("BankTxnCheckedBy", fields: [checkedById], references: [id])
 
   categoryId    String?
   category      BankCategory?   @relation(fields: [categoryId], references: [id])
