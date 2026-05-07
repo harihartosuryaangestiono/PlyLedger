@@ -1,8 +1,18 @@
 import prisma from "@/lib/prisma";
 import PrintClient from "./client";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ type: string, id: string }> }): Promise<Metadata> {
+  const { type } = await params;
+  const typeLabel = type.toUpperCase();
+  return {
+    title: `${typeLabel} Print`,
+    description: "Printable transaction document",
+  };
+}
 
 export default async function PrintPage({ params }: { params: Promise<{ type: string, id: string }> }) {
   const { type, id } = await params;
