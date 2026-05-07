@@ -1,7 +1,7 @@
 import { hasAccess, canEdit } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getShipments } from "./actions";
+import { getShipmentFormOptions, getShipmentPodFiles, getShipments } from "./actions";
 import { ShipmentClient } from "./client";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,11 @@ export default async function ShipmentsPage() {
   }
   const isReadOnly = !canEdit(role, "shipments");
 
-  const shipments = await getShipments();
+  const [shipments, formOptions, initialPodFiles] = await Promise.all([
+    getShipments(),
+    getShipmentFormOptions(),
+    getShipmentPodFiles(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -22,7 +26,12 @@ export default async function ShipmentsPage() {
         <h2 className="text-2xl font-bold tracking-tight">Shipments</h2>
         <p className="text-muted-foreground">Track containers and logistics.</p>
       </div>
-      <ShipmentClient initialShipments={shipments}  readOnly={isReadOnly} />
+      <ShipmentClient
+        initialShipments={shipments}
+        formOptions={formOptions}
+        initialPodFiles={initialPodFiles}
+        readOnly={isReadOnly}
+      />
     </div>
   );
 }
