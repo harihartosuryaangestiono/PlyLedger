@@ -58,6 +58,12 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   const selectedSupplierName =
     suppliers?.find((s: any) => s.id === supplierId)?.name || "";
 
+  const formatProductLabel = (product: any) => {
+    const details = [product.type, product.grade, product.thickness, product.size].filter(Boolean).join(" ");
+    const prefix = product.sku ? `[${product.sku}] ` : "";
+    return details ? `${prefix}${product.name} - ${details}` : `${prefix}${product.name}`;
+  };
+
   const handleExport = () => {
     const csvContent = [
       ["PO Number", "Supplier", "Total Cost", "Status", "Date"],
@@ -285,7 +291,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                           <SearchableSelect 
                             options={products.map((p: any) => ({
                               value: p.id,
-                              label: `${p.sku ? `[${p.sku}] ` : ''}${p.name} - ${p.type} ${p.grade} ${p.thickness} ${p.size}`
+                              label: formatProductLabel(p)
                             }))}
                             value={item.productId}
                             onChange={(v) => updateItem(idx, "productId", v)}

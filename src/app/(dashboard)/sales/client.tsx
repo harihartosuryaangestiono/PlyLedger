@@ -31,6 +31,11 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCustomer, setFilterCustomer] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const numberInputClass =
+    "h-9 text-center tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  const moneyInputClass =
+    "h-9 text-right tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  const productGridClass = "grid grid-cols-[minmax(280px,1fr)_88px_72px_140px_140px_32px] gap-2";
 
   const uniqueThicknesses = Array.from(new Set(
     initialOrders.flatMap((so: any) => so.items.map((i: any) => i.product?.thickness)).filter(Boolean)
@@ -53,6 +58,12 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
 
   const selectedCustomerName =
     customers?.find((c: any) => c.id === customerId)?.name || "";
+
+  const formatProductLabel = (product: any) => {
+    const details = [product.type, product.grade, product.thickness, product.size].filter(Boolean).join(" ");
+    const prefix = product.sku ? `[${product.sku}] ` : "";
+    return details ? `${prefix}${product.name} - ${details}` : `${prefix}${product.name}`;
+  };
 
   const handleExport = () => {
     const csvContent = [
@@ -225,7 +236,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
             <>
               <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create SO</Button>} />
-              <DialogContent className="sm:max-w-3xl w-full">
+              <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Sales Order</DialogTitle>
                 </DialogHeader>
@@ -254,7 +265,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 hidden">
                         <Label htmlFor="currency">Currency</Label>
                         <Input id="currency" name="currency" defaultValue="IDR" readOnly className="bg-slate-50 text-slate-500 hidden" />
                       </div>
@@ -279,7 +290,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                     </div>
                     
                     <div className="space-y-3">
-                      <div className="grid grid-cols-[3fr_1fr_1fr_2fr_2fr_auto] gap-2 mb-2 px-2">
+                      <div className={`${productGridClass} mb-2 px-2`}>
                         <div className="text-xs font-semibold text-slate-500 uppercase">Nama Barang</div>
                         <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pallet</div>
                         <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pcs</div>
@@ -288,19 +299,44 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                         <div className="w-8"></div>
                       </div>
                       {items.map((item, idx) => (
-                        <div key={idx} className="grid grid-cols-[3fr_1fr_1fr_2fr_2fr_auto] gap-2 items-center bg-white p-2 border rounded-md">
+                        <div key={idx} className={`${productGridClass} items-center bg-white p-2 border rounded-md`}>
                           <SearchableSelect 
                             options={products.map((p: any) => ({
                               value: p.id,
-                              label: `${p.sku ? `[${p.sku}] ` : ''}${p.name} - ${p.type} ${p.grade} ${p.thickness} ${p.size}`
+                              label: formatProductLabel(p)
                             }))}
                             value={item.productId}
                             onChange={(v) => updateItem(idx, "productId", v)}
                             placeholder="Cari nama atau SKU barang..."
                           />
-                          <Input type="number" placeholder="0" value={item.pallets} onChange={(e) => updateItem(idx, "pallets", e.target.value)} className="text-center" />
-                          <Input type="number" placeholder="0" min="1" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="text-center" required />
-                          <Input type="number" placeholder="0" min="0" value={item.sellingPrice} onChange={(e) => updateItem(idx, "sellingPrice", e.target.value)} className="text-right" required />
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={item.pallets}
+                            onChange={(e) => updateItem(idx, "pallets", e.target.value)}
+                            className={numberInputClass}
+                          />
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="0"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                            className={numberInputClass}
+                            required
+                          />
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="0"
+                            min="0"
+                            value={item.sellingPrice}
+                            onChange={(e) => updateItem(idx, "sellingPrice", e.target.value)}
+                            className={moneyInputClass}
+                            required
+                          />
                           <div className="text-right px-3 text-sm font-medium text-slate-700 bg-slate-50 border rounded-md h-9 flex items-center justify-end">
                             {((Number(item.quantity) || 0) * (Number(item.sellingPrice) || 0)).toLocaleString("id-ID")}
                           </div>
@@ -312,7 +348,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                       ))}
                     </div>
                     
-                    <div className="pt-4 border-t border-slate-200 mt-4 space-y-2">
+                    <div className="pt-4 border-t border-slate-200 mt-4 space-y-3">
                       <div className="flex justify-end items-center gap-4">
                         <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
                           <input type="checkbox" checked={hasTax} onChange={(e) => setHasTax(e.target.checked)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
@@ -321,7 +357,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                       </div>
                       
                       <div className="flex justify-end">
-                        <div className="w-64 space-y-2 text-right">
+                        <div className="w-72 space-y-2 text-right">
                           <div className="flex justify-between text-sm text-slate-500">
                             <span>Subtotal:</span>
                             <span>Rp {subTotal.toLocaleString("id-ID")}</span>
