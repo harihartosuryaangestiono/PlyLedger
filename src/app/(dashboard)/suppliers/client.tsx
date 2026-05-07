@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { createSupplier, deleteSupplier } from "./actions";
-import { Trash2, Plus, Search, Download } from "lucide-react";
+import { createSupplier, deleteSupplier, updateSupplier } from "./actions";
+import { Edit2, Trash2, Plus, Search, Download } from "lucide-react";
 
 type Supplier = {
   id: string;
@@ -21,6 +21,17 @@ type Supplier = {
 export function SupplierClient({ initialSuppliers , readOnly }: { initialSuppliers: Supplier[] , readOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [editSupplier, setEditSupplier] = useState<Supplier | null>(null);
+  const [editName, setEditName] = useState<string>("");
+  const [editContactPerson, setEditContactPerson] = useState<string>("");
+  const [editEmail, setEditEmail] = useState<string>("");
+  const [editPhone, setEditPhone] = useState<string>("");
+  const [editAddress, setEditAddress] = useState<string>("");
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredSuppliers = initialSuppliers.filter((s: Supplier) => {
@@ -71,6 +82,49 @@ export function SupplierClient({ initialSuppliers , readOnly }: { initialSupplie
     setOpen(false);
   }
 
+  function startEdit(supplier: Supplier) {
+    setEditSupplier(supplier);
+    setEditName(supplier.name);
+    setEditContactPerson(supplier.contactPerson ?? "");
+    setEditEmail(supplier.email ?? "");
+    setEditPhone(supplier.phone ?? "");
+    setEditAddress(supplier.address ?? "");
+    setEditOpen(true);
+  }
+
+  async function onEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editSupplier) return;
+
+    setEditLoading(true);
+    const result = await updateSupplier(editSupplier.id, {
+      name: editName,
+      contactPerson: editContactPerson.trim() ? editContactPerson.trim() : null,
+      email: editEmail.trim() ? editEmail.trim() : null,
+      phone: editPhone.trim() ? editPhone.trim() : null,
+      address: editAddress.trim() ? editAddress.trim() : null,
+    });
+    setEditLoading(false);
+
+    if (result.success) {
+      setEditOpen(false);
+      setEditSupplier(null);
+    } else {
+      alert("Error: " + (result.error || "Gagal mengubah supplier"));
+    }
+  }
+
+  async function onDelete(supplierId: string) {
+    if (!confirm("Delete supplier ini?")) return;
+    setDeletingId(supplierId);
+    const result = await deleteSupplier(supplierId);
+    setDeletingId(null);
+
+    if (!result.success) {
+      alert("Error: " + (result.error || "Gagal menghapus supplier"));
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -92,43 +146,111 @@ export function SupplierClient({ initialSuppliers , readOnly }: { initialSupplie
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
           {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Supplier</Button>} />
-              <DialogContent className="sm:max-w-md w-full">
-                <DialogHeader>
-                  <DialogTitle>Add New Supplier</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={onSubmit} className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Supplier Name</Label>
-                      <Input id="name" name="name" placeholder="e.g., PT Sumber Kayu" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contactPerson">Contact Person</Label>
-                      <Input id="contactPerson" name="contactPerson" placeholder="e.g., Budi Santoso" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+            <>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Supplier</Button>} />
+                <DialogContent className="sm:max-w-md w-full">
+                  <DialogHeader>
+                    <DialogTitle>Add New Supplier</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={onSubmit} className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" name="email" type="email" placeholder="budi@example.com" />
+                        <Label htmlFor="name">Supplier Name</Label>
+                        <Input id="name" name="name" placeholder="e.g., PT Sumber Kayu" required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" name="phone" placeholder="+62..." />
+                        <Label htmlFor="contactPerson">Contact Person</Label>
+                        <Input id="contactPerson" name="contactPerson" placeholder="e.g., Budi Santoso" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input id="email" name="email" type="email" placeholder="budi@example.com" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input id="phone" name="phone" placeholder="+62..." />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <Input id="address" name="address" placeholder="Full address" />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input id="address" name="address" placeholder="Full address" />
+                    <div className="flex justify-end pt-2">
+                      <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Supplier"}</Button>
                     </div>
-                  </div>
-                  <div className="flex justify-end pt-2">
-                    <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Supplier"}</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={editOpen}
+                onOpenChange={(v) => {
+                  setEditOpen(v);
+                  if (!v) setEditSupplier(null);
+                }}
+              >
+                <DialogContent className="sm:max-w-md w-full">
+                  <DialogHeader>
+                    <DialogTitle>Edit Supplier</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={onEditSubmit} className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="editName">Supplier Name</Label>
+                        <Input id="editName" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editContactPerson">Contact Person</Label>
+                        <Input
+                          id="editContactPerson"
+                          value={editContactPerson}
+                          onChange={(e) => setEditContactPerson(e.target.value)}
+                          placeholder="e.g., Budi Santoso"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="editEmail">Email</Label>
+                          <Input
+                            id="editEmail"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            type="email"
+                            placeholder="budi@example.com"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editPhone">Phone</Label>
+                          <Input
+                            id="editPhone"
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            placeholder="+62..."
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editAddress">Address</Label>
+                        <Input
+                          id="editAddress"
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          placeholder="Full address"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button type="submit" disabled={editLoading || !editSupplier} className="w-full">
+                        {editLoading ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
       </div>
@@ -159,7 +281,31 @@ export function SupplierClient({ initialSuppliers , readOnly }: { initialSupplie
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{supplier.email || "-"}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{supplier.phone || "-"}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">
-                    {/* readOnly handling */}
+                    {!readOnly && (
+                      <div className="flex justify-end items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => startEdit(supplier)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => onDelete(supplier.id)}
+                          disabled={deletingId === supplier.id}
+                        >
+                          <Trash2 className={`h-4 w-4 ${deletingId === supplier.id ? "text-slate-400" : "text-red-600"}`} />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

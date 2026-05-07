@@ -7,15 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { recordPayment } from "./actions";
+import { deleteInvoice, recordPayment, updateInvoice } from "./actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Search, Printer, Download } from "lucide-react";
+import { DollarSign, Search, Printer, Download, Edit2, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export function PaymentClient({ initialInvoices , readOnly }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editInvoice, setEditInvoice] = useState<any>(null);
+  const [editDueDate, setEditDueDate] = useState<string>("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,6 +88,41 @@ export function PaymentClient({ initialInvoices , readOnly }: any) {
     setOpen(true);
   };
 
+  const startEdit = (invoice: any) => {
+    setEditInvoice(invoice);
+    setEditDueDate(invoice?.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : "");
+    setEditOpen(true);
+  };
+
+  async function onEditSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editInvoice) return;
+
+    setEditLoading(true);
+    const result = await updateInvoice(editInvoice.id, {
+      dueDate: editDueDate ? editDueDate : null,
+    });
+    setEditLoading(false);
+
+    if (result.success) {
+      setEditOpen(false);
+      setEditInvoice(null);
+    } else {
+      alert("Error: " + (result.error || "Gagal mengubah invoice"));
+    }
+  }
+
+  async function onDelete(invoiceId: string) {
+    if (!confirm("Delete invoice ini?")) return;
+    setDeletingId(invoiceId);
+    const result = await deleteInvoice(invoiceId);
+    setDeletingId(null);
+
+    if (!result.success) {
+      alert("Error: " + (result.error || "Gagal menghapus invoice"));
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PAID': return <Badge variant="success">{status}</Badge>;
@@ -140,46 +180,82 @@ export function PaymentClient({ initialInvoices , readOnly }: any) {
       {/* readOnly handling */}
 
       {!readOnly && (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-md w-full">
-            <DialogHeader>
-              <DialogTitle>Record Payment: {selectedInvoice?.invoiceNumber}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="text-sm font-medium text-slate-500">Total Invoice Amount</span>
-                  <span className="text-sm font-bold">Rp {selectedInvoice?.amount.toLocaleString("id-ID")}</span>
+        <>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent className="sm:max-w-md w-full">
+              <DialogHeader>
+                <DialogTitle>Record Payment: {selectedInvoice?.invoiceNumber}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="text-sm font-medium text-slate-500">Total Invoice Amount</span>
+                    <span className="text-sm font-bold">Rp {selectedInvoice?.amount.toLocaleString("id-ID")}</span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Payment Amount (Rp)</Label>
+                    <Input 
+                      name="amount" 
+                      type="number" 
+                      step="0.01" 
+                      max={selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0} 
+                      required 
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Remaining balance: Rp {(selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0).toLocaleString("id-ID")}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Payment Method</Label>
+                    <Input name="method" placeholder="e.g., Bank Transfer, Check" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Reference / Memo</Label>
+                    <Input name="reference" placeholder="e.g., TXN-98765" />
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Payment Amount (Rp)</Label>
-                  <Input 
-                    name="amount" 
-                    type="number" 
-                    step="0.01" 
-                    max={selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0} 
-                    required 
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Remaining balance: Rp {(selectedInvoice ? selectedInvoice.amount - selectedInvoice.payments.reduce((s:any,p:any)=>s+p.amount,0) : 0).toLocaleString("id-ID")}
-                  </p>
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={loading} className="w-full">{loading ? "Processing..." : "Submit Payment"}</Button>
                 </div>
-                <div className="space-y-2">
-                  <Label>Payment Method</Label>
-                  <Input name="method" placeholder="e.g., Bank Transfer, Check" required />
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={editOpen}
+            onOpenChange={(v) => {
+              setEditOpen(v);
+              if (!v) setEditInvoice(null);
+            }}
+          >
+            <DialogContent className="sm:max-w-md w-full">
+              <DialogHeader>
+                <DialogTitle>Edit Invoice: {editInvoice?.invoiceNumber}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={onEditSubmit} className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                  <div className="space-y-2">
+                    <Label>Due Date</Label>
+                    <Input
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Kosongkan untuk mengosongkan due date.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Reference / Memo</Label>
-                  <Input name="reference" placeholder="e.g., TXN-98765" />
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={editLoading || !editInvoice} className="w-full">
+                    {editLoading ? "Saving..." : "Save Changes"}
+                  </Button>
                 </div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={loading} className="w-full">{loading ? "Processing..." : "Submit Payment"}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
 
       <div className="rounded-2xl border border-slate-200 bg-card shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
@@ -226,13 +302,36 @@ export function PaymentClient({ initialInvoices , readOnly }: any) {
                     <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(inv.status)}</TableCell>
                     <TableCell className="text-right py-3.5 border-b border-slate-100">
                       <div className="flex justify-end items-center gap-2">
-                        {!readOnly && inv.status !== "PAID" ? (
+                      {!readOnly && inv.status !== "PAID" ? (
                           <Button variant="outline" size="sm" onClick={() => handlePayClick(inv)} className="h-8">
                             <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Pay
                           </Button>
                         ) : (
                           <span className="text-sm text-slate-400 font-medium mr-2">{inv.status === "PAID" ? "Settled" : ""}</span>
                         )}
+
+                      {!readOnly && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => startEdit(inv)}
+                            className="h-8"
+                          >
+                            <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDelete(inv.id)}
+                            className="h-8 border-red-200 hover:bg-red-50"
+                            disabled={deletingId === inv.id}
+                          >
+                            <Trash2 className={`mr-1.5 h-3.5 w-3.5 ${deletingId === inv.id ? "text-slate-400" : "text-red-600"}`} /> Delete
+                          </Button>
+                        </>
+                      )}
+
                         <Link href={`/print/invoice/${inv.id}`}>
                           <Button variant="outline" size="sm" className="h-8">
                             <Printer className="mr-1.5 h-3.5 w-3.5" /> Print

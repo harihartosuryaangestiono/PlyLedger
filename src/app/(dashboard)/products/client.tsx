@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createProduct, deleteProduct } from "./actions";
-import { Trash2, Plus, Download, Search } from "lucide-react";
+import { createProduct, deleteProduct, updateProduct } from "./actions";
+import { Edit2, Trash2, Plus, Download, Search } from "lucide-react";
 
 type Product = {
   id: string;
@@ -23,6 +23,18 @@ type Product = {
 export function ProductClient({ initialProducts , readOnly }: { initialProducts: Product[] , readOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editSku, setEditSku] = useState<string>("");
+  const [editName, setEditName] = useState<string>("");
+  const [editType, setEditType] = useState<string>("MR"); // Glue
+  const [editThickness, setEditThickness] = useState<string>("");
+  const [editGrade, setEditGrade] = useState<string>("OVL");
+  const [editSize, setEditSize] = useState<string>("");
+
   const [type, setType] = useState("MR"); // Glue
   const [grade, setGrade] = useState("OVL");
   const [filterThickness, setFilterThickness] = useState("all");
@@ -82,6 +94,51 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
     }
   }
 
+  function startEdit(product: Product) {
+    setEditProduct(product);
+    setEditSku(product.sku ?? "");
+    setEditName(product.name);
+    setEditType(product.type);
+    setEditThickness(product.thickness);
+    setEditGrade(product.grade);
+    setEditSize(product.size);
+    setEditOpen(true);
+  }
+
+  async function onEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editProduct) return;
+
+    setEditLoading(true);
+    const result = await updateProduct(editProduct.id, {
+      sku: editSku.trim() ? editSku.trim() : null,
+      name: editName,
+      type: editType,
+      thickness: editThickness,
+      grade: editGrade,
+      size: editSize,
+    });
+    setEditLoading(false);
+
+    if (result.success) {
+      setEditOpen(false);
+      setEditProduct(null);
+    } else {
+      alert("Error: " + (result.error || "Gagal mengubah produk"));
+    }
+  }
+
+  async function onDelete(productId: string) {
+    if (!confirm("Delete produk ini?")) return;
+    setDeletingId(productId);
+    const result = await deleteProduct(productId);
+    setDeletingId(null);
+
+    if (!result.success) {
+      alert("Error: " + (result.error || "Gagal menghapus produk"));
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -136,77 +193,181 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
           {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Product</Button>} />
-              <DialogContent className="sm:max-w-xl w-full">
-                <DialogHeader>
-                  <DialogTitle>Add New Product</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={onSubmit} className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="sku">SKU (Optional)</Label>
-                        <Input id="sku" name="sku" placeholder="e.g., PLY-MR-18" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Product Name</Label>
-                        <Input id="name" name="name" placeholder="e.g., Meranti Plywood" required />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Glue</Label>
-                        <Select value={type} onValueChange={(v) => setType(v || "")}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select glue" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MR">MR</SelectItem>
-                            <SelectItem value="E2">E2</SelectItem>
-                            <SelectItem value="E1">E1</SelectItem>
-                            <SelectItem value="E0">E0</SelectItem>
-                            <SelectItem value="CARB">CARB</SelectItem>
-                          </SelectContent>
-                        </Select>
+            <>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Product</Button>} />
+                <DialogContent className="sm:max-w-xl w-full">
+                  <DialogHeader>
+                    <DialogTitle>Add New Product</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={onSubmit} className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="sku">SKU (Optional)</Label>
+                          <Input id="sku" name="sku" placeholder="e.g., PLY-MR-18" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Product Name</Label>
+                          <Input id="name" name="name" placeholder="e.g., Meranti Plywood" required />
+                        </div>
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label>Grade</Label>
-                        <Select value={grade} onValueChange={(v) => setGrade(v || "")}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="OVL">OVL</SelectItem>
-                            <SelectItem value="BBCC">BBCC</SelectItem>
-                            <SelectItem value="UTY Ekspor">UTY Ekspor</SelectItem>
-                            <SelectItem value="Uty Lokal">Uty Lokal</SelectItem>
-                            <SelectItem value="PG">PG</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Glue</Label>
+                          <Select value={type} onValueChange={(v) => setType(v || "")}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select glue" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MR">MR</SelectItem>
+                              <SelectItem value="E2">E2</SelectItem>
+                              <SelectItem value="E1">E1</SelectItem>
+                              <SelectItem value="E0">E0</SelectItem>
+                              <SelectItem value="CARB">CARB</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Grade</Label>
+                          <Select value={grade} onValueChange={(v) => setGrade(v || "")}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="OVL">OVL</SelectItem>
+                              <SelectItem value="BBCC">BBCC</SelectItem>
+                              <SelectItem value="UTY Ekspor">UTY Ekspor</SelectItem>
+                              <SelectItem value="Uty Lokal">Uty Lokal</SelectItem>
+                              <SelectItem value="PG">PG</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="thickness">Thickness</Label>
+                          <Input id="thickness" name="thickness" placeholder="e.g., 18mm" required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="size">Size</Label>
+                          <Input id="size" name="size" placeholder="e.g., 1220x2440" required />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="thickness">Thickness</Label>
-                        <Input id="thickness" name="thickness" placeholder="e.g., 18mm" required />
+                    <div className="flex justify-end pt-2">
+                      <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Product"}</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={editOpen}
+                onOpenChange={(v) => {
+                  setEditOpen(v);
+                  if (!v) setEditProduct(null);
+                }}
+              >
+                <DialogContent className="sm:max-w-xl w-full">
+                  <DialogHeader>
+                    <DialogTitle>Edit Product</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={onEditSubmit} className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="editSku">SKU (Optional)</Label>
+                          <Input
+                            id="editSku"
+                            value={editSku}
+                            onChange={(e) => setEditSku(e.target.value)}
+                            placeholder="e.g., PLY-MR-18"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editName">Product Name</Label>
+                          <Input
+                            id="editName"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            placeholder="e.g., Meranti Plywood"
+                            required
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="size">Size</Label>
-                        <Input id="size" name="size" placeholder="e.g., 1220x2440" required />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Glue</Label>
+                          <Select value={editType} onValueChange={(v) => setEditType(v || "")}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select glue" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MR">MR</SelectItem>
+                              <SelectItem value="E2">E2</SelectItem>
+                              <SelectItem value="E1">E1</SelectItem>
+                              <SelectItem value="E0">E0</SelectItem>
+                              <SelectItem value="CARB">CARB</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Grade</Label>
+                          <Select value={editGrade} onValueChange={(v) => setEditGrade(v || "")}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="OVL">OVL</SelectItem>
+                              <SelectItem value="BBCC">BBCC</SelectItem>
+                              <SelectItem value="UTY Ekspor">UTY Ekspor</SelectItem>
+                              <SelectItem value="Uty Lokal">Uty Lokal</SelectItem>
+                              <SelectItem value="PG">PG</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="editThickness">Thickness</Label>
+                          <Input
+                            id="editThickness"
+                            value={editThickness}
+                            onChange={(e) => setEditThickness(e.target.value)}
+                            placeholder="e.g., 18mm"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editSize">Size</Label>
+                          <Input
+                            id="editSize"
+                            value={editSize}
+                            onChange={(e) => setEditSize(e.target.value)}
+                            placeholder="e.g., 1220x2440"
+                            required
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex justify-end pt-2">
-                    <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Product"}</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <div className="flex justify-end pt-2">
+                      <Button type="submit" disabled={editLoading || !editProduct} className="w-full">
+                        {editLoading ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
       </div>
@@ -241,7 +402,31 @@ export function ProductClient({ initialProducts , readOnly }: { initialProducts:
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{product.thickness}</TableCell>
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{product.size}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">
-                    {/* readOnly handling */}
+                    {!readOnly && (
+                      <div className="flex justify-end items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => startEdit(product)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => onDelete(product.id)}
+                          disabled={deletingId === product.id}
+                        >
+                          <Trash2 className={`h-4 w-4 ${deletingId === product.id ? "text-slate-400" : "text-red-600"}`} />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

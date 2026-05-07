@@ -7,14 +7,27 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { createShipment } from "./actions";
+import { createShipment, deleteShipment, updateShipment } from "./actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Printer, Download } from "lucide-react";
+import { Edit2, Plus, Search, Printer, Download, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export function ShipmentClient({ initialShipments , readOnly }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [editShipment, setEditShipment] = useState<any>(null);
+  const [editContainerNumber, setEditContainerNumber] = useState<string>("");
+  const [editBillOfLading, setEditBillOfLading] = useState<string>("");
+  const [editOriginPort, setEditOriginPort] = useState<string>("");
+  const [editDestinationPort, setEditDestinationPort] = useState<string>("");
+  const [editEtd, setEditEtd] = useState<string>("");
+  const [editEta, setEditEta] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<string>("PENDING");
+
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -79,10 +92,57 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
       case 'DELIVERED': return <Badge variant="success">{status}</Badge>;
       case 'IN_TRANSIT': return <Badge variant="info">{status.replace('_', ' ')}</Badge>;
       case 'PENDING': return <Badge variant="warning">{status}</Badge>;
-      case 'CANCELLED': return <Badge variant="error">{status}</Badge>;
+      case 'ARRIVED': return <Badge variant="info">{status.replace('_', ' ')}</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  function startEdit(shipment: any) {
+    setEditShipment(shipment);
+    setEditContainerNumber(shipment.containerNumber || "");
+    setEditBillOfLading(shipment.billOfLading || "");
+    setEditOriginPort(shipment.originPort || "");
+    setEditDestinationPort(shipment.destinationPort || "");
+    setEditEtd(shipment.etd ? new Date(shipment.etd).toISOString().slice(0, 10) : "");
+    setEditEta(shipment.eta ? new Date(shipment.eta).toISOString().slice(0, 10) : "");
+    setEditStatus(shipment.status || "PENDING");
+    setEditOpen(true);
+  }
+
+  async function onEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editShipment) return;
+
+    setEditLoading(true);
+    const result = await updateShipment(editShipment.id, {
+      containerNumber: editContainerNumber.trim() ? editContainerNumber.trim() : null,
+      billOfLading: editBillOfLading.trim() ? editBillOfLading.trim() : null,
+      originPort: editOriginPort.trim() ? editOriginPort.trim() : null,
+      destinationPort: editDestinationPort.trim() ? editDestinationPort.trim() : null,
+      etd: editEtd.trim() ? editEtd.trim() : null,
+      eta: editEta.trim() ? editEta.trim() : null,
+      status: editStatus,
+    });
+    setEditLoading(false);
+
+    if (result.success) {
+      setEditOpen(false);
+      setEditShipment(null);
+    } else {
+      alert("Error: " + (result.error || "Gagal mengubah shipment"));
+    }
+  }
+
+  async function onDelete(shipmentId: string) {
+    if (!confirm("Delete shipment ini?")) return;
+    setDeletingId(shipmentId);
+    const result = await deleteShipment(shipmentId);
+    setDeletingId(null);
+
+    if (!result.success) {
+      alert("Error: " + (result.error || "Gagal menghapus shipment"));
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-8">
@@ -116,48 +176,150 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
           {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Shipment</Button>} />
-              <DialogContent className="sm:max-w-2xl w-full">
-                <DialogHeader>
-                  <DialogTitle>Track New Shipment</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={onSubmit} className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="containerNumber">Container Number</Label>
-                        <Input id="containerNumber" name="containerNumber" placeholder="e.g., MSKU1234567" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="billOfLading">Bill of Lading (BL)</Label>
-                        <Input id="billOfLading" name="billOfLading" placeholder="e.g., BL987654321" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="originPort">Origin Port</Label>
-                        <Input id="originPort" name="originPort" placeholder="e.g., Shanghai" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="destinationPort">Destination Port</Label>
-                        <Input id="destinationPort" name="destinationPort" placeholder="e.g., Los Angeles" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="etd">ETD</Label>
-                        <Input id="etd" name="etd" type="date" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="eta">ETA</Label>
-                        <Input id="eta" name="eta" type="date" />
+            <>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Add Shipment</Button>} />
+                <DialogContent className="sm:max-w-2xl w-full">
+                  <DialogHeader>
+                    <DialogTitle>Track New Shipment</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={onSubmit} className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="containerNumber">Container Number</Label>
+                          <Input id="containerNumber" name="containerNumber" placeholder="e.g., MSKU1234567" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="billOfLading">Bill of Lading (BL)</Label>
+                          <Input id="billOfLading" name="billOfLading" placeholder="e.g., BL987654321" required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="originPort">Origin Port</Label>
+                          <Input id="originPort" name="originPort" placeholder="e.g., Shanghai" required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="destinationPort">Destination Port</Label>
+                          <Input id="destinationPort" name="destinationPort" placeholder="e.g., Los Angeles" required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="etd">ETD</Label>
+                          <Input id="etd" name="etd" type="date" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="eta">ETA</Label>
+                          <Input id="eta" name="eta" type="date" />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex justify-end pt-2">
-                    <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Shipment"}</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <div className="flex justify-end pt-2">
+                      <Button type="submit" disabled={loading} className="w-full">{loading ? "Saving..." : "Save Shipment"}</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={editOpen}
+                onOpenChange={(v) => {
+                  setEditOpen(v);
+                  if (!v) setEditShipment(null);
+                }}
+              >
+                <DialogContent className="sm:max-w-2xl w-full">
+                  <DialogHeader>
+                    <DialogTitle>Edit Shipment</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={onEditSubmit} className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="editContainerNumber">Container Number</Label>
+                          <Input
+                            id="editContainerNumber"
+                            value={editContainerNumber}
+                            onChange={(e) => setEditContainerNumber(e.target.value)}
+                            placeholder="e.g., MSKU1234567"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editBillOfLading">Bill of Lading (BL)</Label>
+                          <Input
+                            id="editBillOfLading"
+                            value={editBillOfLading}
+                            onChange={(e) => setEditBillOfLading(e.target.value)}
+                            placeholder="e.g., BL987654321"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editOriginPort">Origin Port</Label>
+                          <Input
+                            id="editOriginPort"
+                            value={editOriginPort}
+                            onChange={(e) => setEditOriginPort(e.target.value)}
+                            placeholder="e.g., Shanghai"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editDestinationPort">Destination Port</Label>
+                          <Input
+                            id="editDestinationPort"
+                            value={editDestinationPort}
+                            onChange={(e) => setEditDestinationPort(e.target.value)}
+                            placeholder="e.g., Los Angeles"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editEtd">ETD</Label>
+                          <Input
+                            id="editEtd"
+                            value={editEtd}
+                            onChange={(e) => setEditEtd(e.target.value)}
+                            type="date"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editEta">ETA</Label>
+                          <Input
+                            id="editEta"
+                            value={editEta}
+                            onChange={(e) => setEditEta(e.target.value)}
+                            type="date"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <Select value={editStatus} onValueChange={(v) => setEditStatus(v || "PENDING")}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PENDING">PENDING</SelectItem>
+                              <SelectItem value="IN_TRANSIT">IN_TRANSIT</SelectItem>
+                              <SelectItem value="ARRIVED">ARRIVED</SelectItem>
+                              <SelectItem value="DELIVERED">DELIVERED</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <Button type="submit" disabled={editLoading || !editShipment} className="w-full">
+                        {editLoading ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
       </div>
@@ -199,11 +361,39 @@ export function ShipmentClient({ initialShipments , readOnly }: any) {
                   <TableCell className="text-slate-600 py-3.5 border-b border-slate-100">{shipment.eta ? new Date(shipment.eta).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : "-"}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(shipment.status)}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">
-                    <Link href={`/print/shipment/${shipment.id}`}>
-                      <Button variant="outline" size="sm" className="h-8">
-                        <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
-                      </Button>
-                    </Link>
+                    <div className="flex justify-end items-center gap-2">
+                      {!readOnly && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => startEdit(shipment)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => onDelete(shipment.id)}
+                            disabled={deletingId === shipment.id}
+                          >
+                            <Trash2 className={`h-4 w-4 ${deletingId === shipment.id ? "text-slate-400" : "text-red-600"}`} />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </>
+                      )}
+
+                      <Link href={`/print/shipment/${shipment.id}`}>
+                        <Button variant="outline" size="sm" className="h-8">
+                          <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                        </Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

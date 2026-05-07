@@ -55,3 +55,61 @@ export async function createShipment(data: {
     return { success: false, error: "Failed to create shipment" };
   }
 }
+
+export async function updateShipment(
+  id: string,
+  data: {
+    containerNumber: string | null;
+    billOfLading: string | null;
+    originPort: string | null;
+    destinationPort: string | null;
+    etd: string | null;
+    eta: string | null;
+    status: string;
+  }
+) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "shipments")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.shipment.update({
+      where: { id },
+      data: {
+        containerNumber: data.containerNumber,
+        billOfLading: data.billOfLading,
+        originPort: data.originPort,
+        destinationPort: data.destinationPort,
+        etd: data.etd ? new Date(data.etd) : null,
+        eta: data.eta ? new Date(data.eta) : null,
+        status: data.status as any,
+      },
+    });
+
+    revalidatePath("/shipments");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update shipment" };
+  }
+}
+
+export async function deleteShipment(id: string) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "shipments")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.shipment.delete({
+      where: { id },
+    });
+
+    revalidatePath("/shipments");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete shipment" };
+  }
+}

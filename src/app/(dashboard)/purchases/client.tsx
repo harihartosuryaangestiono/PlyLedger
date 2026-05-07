@@ -9,13 +9,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { createPurchaseOrder } from "./actions";
-import { Plus, Printer, Download, Search } from "lucide-react";
+import { createPurchaseOrder, deletePurchaseOrder, updatePurchaseOrderStatus } from "./actions";
+import { Edit2, Plus, Printer, Download, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export function PurchaseClient({ initialOrders, suppliers, products , readOnly }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [editOrder, setEditOrder] = useState<any>(null);
+  const [editStatus, setEditStatus] = useState<string>("DRAFT");
+
   const [items, setItems] = useState([{ productId: "", pallets: "", quantity: 1, unitPrice: 0 }]);
   const [supplierId, setSupplierId] = useState("");
   const [hasTax, setHasTax] = useState(false);
@@ -113,12 +120,46 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'COMPLETED': return <Badge variant="success">{status}</Badge>;
-      case 'PENDING': return <Badge variant="warning">{status}</Badge>;
-      case 'CONFIRMED': return <Badge variant="info">{status}</Badge>;
+      case 'SHIPPED': return <Badge variant="info">{status.replace('_', ' ')}</Badge>;
+      case 'DRAFT': return <Badge variant="outline">{status}</Badge>;
+      case 'CONFIRMED': return <Badge variant="warning">{status}</Badge>;
       case 'CANCELLED': return <Badge variant="error">{status}</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  function startEdit(order: any) {
+    setEditOrder(order);
+    setEditStatus(order.status || "DRAFT");
+    setEditOpen(true);
+  }
+
+  async function onEditSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editOrder) return;
+
+    setEditLoading(true);
+    const result = await updatePurchaseOrderStatus(editOrder.id, editStatus);
+    setEditLoading(false);
+
+    if (result.success) {
+      setEditOpen(false);
+      setEditOrder(null);
+    } else {
+      alert("Error: " + (result.error || "Gagal mengubah purchase order"));
+    }
+  }
+
+  async function onDelete(orderId: string) {
+    if (!confirm("Delete purchase order ini?")) return;
+    setDeletingId(orderId);
+    const result = await deletePurchaseOrder(orderId);
+    setDeletingId(null);
+
+    if (!result.success) {
+      alert("Error: " + (result.error || "Gagal menghapus purchase order"));
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-8">
@@ -174,9 +215,10 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
           {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create PO</Button>} />
-              <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Create PO</Button>} />
+                <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Purchase Order</DialogTitle>
                 </DialogHeader>
@@ -214,11 +256,11 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                     
                     <div className="space-y-3">
                       <div className="grid grid-cols-[3fr_1fr_1fr_2fr_2fr_auto] gap-2 mb-2 px-2">
-                        <div className="text-xs font-semibold text-slate-500 uppercase">Product</div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pallets</div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">PCS</div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Price/PCS</div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Total</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase">Nama Barang</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pallet</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pcs</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Harga Per Pcs</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Jumlah</div>
                         <div className="w-8"></div>
                       </div>
                       {items.map((item, idx) => (
@@ -230,7 +272,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                             }))}
                             value={item.productId}
                             onChange={(v) => updateItem(idx, "productId", v)}
-                            placeholder="Search product..."
+                            placeholder="Cari nama atau SKU barang..."
                           />
                           <Input type="number" placeholder="0" value={item.pallets} onChange={(e) => updateItem(idx, "pallets", e.target.value)} className="text-center" />
                           <Input type="number" placeholder="0" min="1" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="text-center" required />
@@ -279,8 +321,45 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                     <Button type="submit" disabled={loading || !supplierId} className="w-32">{loading ? "Saving..." : "Create PO"}</Button>
                   </div>
                 </form>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={editOpen}
+                onOpenChange={(v) => {
+                  setEditOpen(v);
+                  if (!v) setEditOrder(null);
+                }}
+              >
+                <DialogContent className="sm:max-w-md w-full">
+                  <DialogHeader>
+                    <DialogTitle>Edit Purchase Order Status</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={onEditSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select value={editStatus} onValueChange={(v) => setEditStatus(v || "DRAFT")}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="DRAFT">DRAFT</SelectItem>
+                          <SelectItem value="CONFIRMED">CONFIRMED</SelectItem>
+                          <SelectItem value="SHIPPED">SHIPPED</SelectItem>
+                          <SelectItem value="COMPLETED">COMPLETED</SelectItem>
+                          <SelectItem value="CANCELLED">CANCELLED</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button type="submit" disabled={editLoading || !editOrder} className="w-full sm:w-32">
+                        {editLoading ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
       </div>
@@ -313,11 +392,37 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                   </TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">{getStatusBadge(po.status)}</TableCell>
                   <TableCell className="text-right py-3.5 border-b border-slate-100">
-                    <Link href={`/print/po/${po.id}`}>
-                      <Button variant="outline" size="sm" className="h-8">
-                        <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
-                      </Button>
-                    </Link>
+                    <div className="flex justify-end items-center gap-2">
+                      {!readOnly && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => startEdit(po)}
+                            disabled={deletingId === po.id}
+                          >
+                            <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-red-200 hover:bg-red-50"
+                            onClick={() => onDelete(po.id)}
+                            disabled={deletingId === po.id}
+                          >
+                            <Trash2 className={`mr-1.5 h-3.5 w-3.5 ${deletingId === po.id ? "text-slate-400" : "text-red-600"}`} /> Delete
+                          </Button>
+                        </>
+                      )}
+                      <Link href={`/print/po/${po.id}`}>
+                        <Button variant="outline" size="sm" className="h-8">
+                          <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                        </Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

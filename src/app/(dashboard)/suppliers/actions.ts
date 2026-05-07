@@ -58,3 +58,38 @@ export async function deleteSupplier(id: string) {
     return { success: false, error: "Failed to delete supplier" };
   }
 }
+
+export async function updateSupplier(
+  id: string,
+  data: {
+    name: string;
+    contactPerson: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+  }
+) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "suppliers")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.supplier.update({
+      where: { id },
+      data: {
+        name: data.name,
+        contactPerson: data.contactPerson,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
+
+    revalidatePath("/suppliers");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update supplier" };
+  }
+}

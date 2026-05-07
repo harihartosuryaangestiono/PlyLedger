@@ -133,3 +133,70 @@ export async function recordPayment(data: {
     return { success: false, error: "Failed to record payment" };
   }
 }
+
+export async function updateInvoice(
+  invoiceId: string,
+  data: {
+    dueDate: string | null;
+  }
+) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "payments")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      },
+    });
+
+    revalidatePath("/payments");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update invoice" };
+  }
+}
+
+export async function deleteInvoice(invoiceId: string) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "payments")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const payments = await tx.payment.findMany({
+        where: { invoiceId },
+        select: { id: true },
+      });
+
+      const paymentIds = payments.map((p) => p.id);
+
+      if (paymentIds.length > 0) {
+        await tx.journalEntry.deleteMany({
+          where: {
+            referenceType: "Payment",
+            referenceId: { in: paymentIds },
+          },
+        });
+        await tx.payment.deleteMany({
+          where: { id: { in: paymentIds } },
+        });
+      }
+
+      await tx.invoice.delete({
+        where: { id: invoiceId },
+      });
+    });
+
+    revalidatePath("/payments");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete invoice" };
+  }
+}

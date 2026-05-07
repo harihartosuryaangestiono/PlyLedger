@@ -63,3 +63,42 @@ export async function deleteProduct(id: string) {
     return { success: false, error: "Failed to delete product" };
   }
 }
+
+export async function updateProduct(
+  id: string,
+  data: {
+    sku?: string | null;
+    name: string;
+    type: string;
+    thickness: string;
+    grade: string;
+    size: string;
+  }
+) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "products")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    const skuValue = data.sku && data.sku.trim() !== "" ? data.sku.trim() : null;
+
+    await prisma.product.update({
+      where: { id },
+      data: {
+        sku: skuValue,
+        name: data.name,
+        type: data.type,
+        thickness: data.thickness,
+        grade: data.grade,
+        size: data.size,
+      },
+    });
+
+    revalidatePath("/products");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to update product" };
+  }
+}

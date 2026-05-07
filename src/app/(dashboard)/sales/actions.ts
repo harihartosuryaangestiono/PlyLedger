@@ -49,7 +49,7 @@ export async function getProductsForSelect() {
 
   try {
     return await prisma.product.findMany({
-      select: { id: true, name: true, type: true, thickness: true, size: true }
+      select: { id: true, sku: true, name: true, type: true, thickness: true, size: true }
     });
   } catch (e) { return []; }
 }
@@ -59,7 +59,11 @@ export async function createSalesOrder(data: {
   customerId: string;
   currency: string;
   paymentTerms: "CASH" | "INSTALLMENT" | "LC";
-  items: { productId: string; quantity: number; sellingPrice: number; unit: string }[];
+  subTotal: number;
+  hasTax: boolean;
+  taxAmount: number;
+  totalAmount: number;
+  items: { productId: string; pallets?: number | null; quantity: number; sellingPrice: number; unit: string; totalPrice: number }[];
 }) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";
@@ -68,23 +72,24 @@ export async function createSalesOrder(data: {
   }
 
   try {
-    // Calculate total amount from items
-    const itemsCost = data.items.reduce((sum: number, item: any) => sum + (item.quantity * item.sellingPrice), 0);
-
     const so = await prisma.salesOrder.create({
       data: {
         soNumber: data.soNumber,
         customerId: data.customerId,
         currency: data.currency,
         paymentTerms: data.paymentTerms,
-        totalAmount: itemsCost,
+        subTotal: data.subTotal,
+        hasTax: data.hasTax,
+        taxAmount: data.taxAmount,
+        totalAmount: data.totalAmount,
         items: {
           create: data.items.map(item => ({
             productId: item.productId,
+            pallets: item.pallets,
             quantity: item.quantity,
             sellingPrice: item.sellingPrice,
             unit: item.unit,
-            totalPrice: item.quantity * item.sellingPrice
+            totalPrice: item.totalPrice
           }))
         }
       }
@@ -96,7 +101,7 @@ export async function createSalesOrder(data: {
         invoiceNumber: `INV-SO-${data.soNumber}`,
         type: "RECEIVABLE",
         salesOrderId: so.id,
-        amount: itemsCost,
+        amount: data.totalAmount,
         currency: data.currency,
         status: "UNPAID",
       }
@@ -107,5 +112,69 @@ export async function createSalesOrder(data: {
   } catch (error) {
     console.error("Failed to create sales order:", error);
     return { success: false, error: "Failed to create sales order" };
+  }
+}
+
+export async function updateSalesOrderStatus(id: string, status: string) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "sales")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.salesOrder.update({
+      where: { id },
+      data: { status: status as any },
+    });
+
+    revalidatePath("/sales");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update sales order status" };
+  }
+}
+
+export async function deleteSalesOrder(id: string) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "sales")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const invoices = await tx.invoice.findMany({
+        where: { salesOrderId: id },
+        select: {
+          id: true,
+          payments: { select: { id: true } },
+        },
+      });
+
+      const invoiceIds = invoices.map((i) => i.id);
+      const paymentIds = invoices.flatMap((i) => i.payments.map((p) => p.id));
+
+      if (paymentIds.length > 0) {
+        await tx.journalEntry.deleteMany({
+          where: {
+            referenceType: "Payment",
+            referenceId: { in: paymentIds },
+          },
+        });
+        await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
+      }
+
+      if (invoiceIds.length > 0) {
+        await tx.invoice.deleteMany({ where: { id: { in: invoiceIds } } });
+      }
+
+      await tx.salesOrder.delete({ where: { id } });
+    });
+
+    revalidatePath("/sales");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete sales order" };
   }
 }

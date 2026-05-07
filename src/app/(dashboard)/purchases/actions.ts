@@ -49,7 +49,7 @@ export async function getProductsForSelect() {
 
   try {
     return await prisma.product.findMany({
-      select: { id: true, name: true, type: true, thickness: true, size: true }
+      select: { id: true, sku: true, name: true, type: true, thickness: true, size: true }
     });
   } catch (e) { return []; }
 }
@@ -99,7 +99,7 @@ export async function createPurchaseOrder(data: {
         invoiceNumber: `INV-PO-${data.poNumber}`,
         type: "PAYABLE",
         purchaseOrderId: po.id,
-        amount: itemsCost,
+        amount: data.totalAmount,
         currency: data.currency,
         status: "UNPAID",
       }
@@ -110,5 +110,70 @@ export async function createPurchaseOrder(data: {
   } catch (error) {
     console.error("Failed to create purchase order:", error);
     return { success: false, error: "Failed to create purchase order" };
+  }
+}
+
+export async function updatePurchaseOrderStatus(id: string, status: string) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "purchases")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.purchaseOrder.update({
+      where: { id },
+      data: { status: status as any },
+    });
+
+    revalidatePath("/purchases");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update purchase order status" };
+  }
+}
+
+export async function deletePurchaseOrder(id: string) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "purchases")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const invoices = await tx.invoice.findMany({
+        where: { purchaseOrderId: id },
+        select: {
+          id: true,
+          payments: { select: { id: true } },
+        },
+      });
+
+      const invoiceIds = invoices.map((i) => i.id);
+      const paymentIds = invoices.flatMap((i) => i.payments.map((p) => p.id));
+
+      if (paymentIds.length > 0) {
+        // Keep accounting ledger consistent by removing journal entries created for those payments
+        await tx.journalEntry.deleteMany({
+          where: {
+            referenceType: "Payment",
+            referenceId: { in: paymentIds },
+          },
+        });
+        await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
+      }
+
+      if (invoiceIds.length > 0) {
+        await tx.invoice.deleteMany({ where: { id: { in: invoiceIds } } });
+      }
+
+      await tx.purchaseOrder.delete({ where: { id } });
+    });
+
+    revalidatePath("/purchases");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete purchase order" };
   }
 }
