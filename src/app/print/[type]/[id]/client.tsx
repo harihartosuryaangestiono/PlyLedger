@@ -60,15 +60,18 @@ export default function PrintClient({ type, data }: { type: string, data: any })
     </div>
   );
 
-  const renderEntity = (title: string, entity: any, extraInfo?: string) => (
+  const renderEntity = (title: string, entity: any, extraInfo?: string, hidePhone?: boolean) => (
     <div className="mb-6">
       <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">{title}</h3>
       <p className="text-lg font-bold text-slate-900">{entity?.name || "Unknown"}</p>
       {entity?.address && <p className="text-slate-600 mt-1">{entity.address}</p>}
-      {(entity?.phone || entity?.email) && (
+      {(!hidePhone && (entity?.phone || entity?.email)) && (
         <p className="text-slate-600 mt-1">
           {entity?.phone} {entity?.phone && entity?.email && "•"} {entity?.email}
         </p>
+      )}
+      {(hidePhone && entity?.email) && (
+        <p className="text-slate-600 mt-1">{entity?.email}</p>
       )}
       {extraInfo && <p className="text-slate-600 mt-1">{extraInfo}</p>}
     </div>
@@ -195,7 +198,10 @@ export default function PrintClient({ type, data }: { type: string, data: any })
       <div className="bg-white text-slate-900 p-10 max-w-4xl mx-auto min-h-screen">
         {printStyles}
         {renderHeader("PURCHASE ORDER", data.poNumber, formatDate(data.createdAt))}
-        {renderEntity("Supplier", data.supplier)}
+        <div className="grid grid-cols-2 gap-8">
+          {renderEntity("Supplier", data.supplier, undefined, true)}
+          {data.shippingAddress && renderEntity("Shipping Address", { name: "Deliver To", address: data.shippingAddress }, undefined, true)}
+        </div>
         {data.items && renderItems(data.items)}
         {renderTotals(subTotal, taxAmount, totalAmount, Boolean(data?.hasTax))}
         {renderSignatures()}
@@ -212,7 +218,10 @@ export default function PrintClient({ type, data }: { type: string, data: any })
       <div className="bg-white text-slate-900 p-10 max-w-4xl mx-auto min-h-screen">
         {printStyles}
         {renderHeader("SALES ORDER", data.soNumber, formatDate(data.createdAt))}
-        {renderEntity("Customer", data.customer, data.paymentTerms ? `Payment Terms: ${data.paymentTerms}` : undefined)}
+        <div className="grid grid-cols-2 gap-8">
+          {renderEntity("Customer", data.customer, data.paymentTerms ? `Payment Terms: ${data.paymentTerms}` : undefined, true)}
+          {data.shippingAddress && renderEntity("Shipping Address", { name: "Deliver To", address: data.shippingAddress }, undefined, true)}
+        </div>
         {data.items && renderItems(data.items)}
         {renderTotals(subTotal, taxAmount, totalAmount, Boolean(data?.hasTax))}
         {renderSignatures()}
@@ -221,37 +230,97 @@ export default function PrintClient({ type, data }: { type: string, data: any })
   }
 
   if (type === "shipment") {
-    // For shipment, we list the orders related to it
+    const isFullDO = !!data.doNumber || !!data.customer || !!data.items?.length;
+    
     return (
       <div className="bg-white text-slate-900 p-10 max-w-4xl mx-auto min-h-screen">
         {printStyles}
-        {renderHeader("DELIVERY ORDER", data.containerNumber || data.id.substring(0,8), formatDate(data.createdAt))}
+        {renderHeader("DELIVERY ORDER", data.doNumber || data.containerNumber || data.id.substring(0,8), formatDate(data.deliveryDate || data.createdAt))}
         
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div>
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Shipment Details</h3>
-            <p><span className="font-semibold w-32 inline-block">Container No:</span> {data.containerNumber || "-"}</p>
-            <p><span className="font-semibold w-32 inline-block">Bill of Lading:</span> {data.billOfLading || "-"}</p>
-            <p><span className="font-semibold w-32 inline-block">Origin:</span> {data.originPort || "-"}</p>
-            <p><span className="font-semibold w-32 inline-block">Destination:</span> {data.destinationPort || "-"}</p>
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Delivery Details</h3>
+            {isFullDO ? (
+              <>
+                <p><span className="font-semibold w-32 inline-block">Customer:</span> {data.customer?.name || data.customerPic || "-"}</p>
+                <p><span className="font-semibold w-32 inline-block">Address:</span> {data.destinationAddress || "-"}</p>
+                <p><span className="font-semibold w-32 inline-block">Driver:</span> {data.driverName || "-"}</p>
+                <p><span className="font-semibold w-32 inline-block">Vehicle Plate:</span> {data.vehiclePlate || "-"}</p>
+              </>
+            ) : (
+              <>
+                <p><span className="font-semibold w-32 inline-block">Container No:</span> {data.containerNumber || "-"}</p>
+                <p><span className="font-semibold w-32 inline-block">Bill of Lading:</span> {data.billOfLading || "-"}</p>
+                <p><span className="font-semibold w-32 inline-block">Origin:</span> {data.originPort || "-"}</p>
+                <p><span className="font-semibold w-32 inline-block">Destination:</span> {data.destinationPort || "-"}</p>
+              </>
+            )}
           </div>
           <div>
              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Status</h3>
+             {isFullDO && data.containerNumber && (
+               <p><span className="font-semibold w-32 inline-block">Container No:</span> {data.containerNumber}</p>
+             )}
              <p><span className="font-semibold w-32 inline-block">Current Status:</span> {data.status}</p>
              <p><span className="font-semibold w-32 inline-block">ETD:</span> {data.etd ? new Date(data.etd).toLocaleDateString() : "-"}</p>
              <p><span className="font-semibold w-32 inline-block">ETA:</span> {data.eta ? new Date(data.eta).toLocaleDateString() : "-"}</p>
           </div>
         </div>
 
-        <div className="mb-16">
-           <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Related Orders</h3>
-           {data.purchaseOrders?.map((po: any) => (
-             <p key={po.id} className="py-2 border-b border-slate-100">PO: <span className="font-bold">{po.poNumber}</span> - Supplier: {po.supplier?.name}</p>
-           ))}
-           {data.salesOrders?.map((so: any) => (
-             <p key={so.id} className="py-2 border-b border-slate-100">SO: <span className="font-bold">{so.soNumber}</span> - Customer: {so.customer?.name}</p>
-           ))}
-        </div>
+        {isFullDO && data.items && data.items.length > 0 ? (
+          <div className="mb-16">
+            <table className="w-full text-left border-collapse mb-6 table-fixed">
+              <colgroup>
+                <col className="w-[10%]" />
+                <col className="w-[50%]" />
+                <col className="w-[20%]" />
+                <col className="w-[20%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b-2 border-slate-900">
+                  <th className="py-3 w-10 font-bold text-slate-900">No</th>
+                  <th className="py-3 font-bold text-slate-900">Description</th>
+                  <th className="py-3 text-right font-bold text-slate-900 pr-8">Qty</th>
+                  <th className="py-3 font-bold text-slate-900 pl-4">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((item: any, i: number) => (
+                  <tr key={i} className="border-b border-slate-200">
+                    <td className="py-3 pr-2 text-slate-600 align-top">{i + 1}</td>
+                    <td className="py-4 pr-4">
+                      <p className="font-semibold text-slate-900 leading-snug">{item.product.name}</p>
+                      <p className="text-sm text-slate-500">
+                        {[item.product.type, item.product.grade, item.product.thickness, item.product.size].filter(Boolean).join(" • ")}
+                      </p>
+                    </td>
+                    <td className="py-4 text-right align-top whitespace-nowrap pr-8">
+                      {Number(item.quantity || 0).toLocaleString("id-ID")} {item.unit || "pcs"}
+                    </td>
+                    <td className="py-4 align-top pl-4">{item.notes || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="mb-16">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Related Orders</h3>
+            {data.purchaseOrders?.map((po: any) => (
+              <p key={po.id} className="py-2 border-b border-slate-100">PO: <span className="font-bold">{po.poNumber}</span> - Supplier: {po.supplier?.name}</p>
+            ))}
+            {data.salesOrders?.map((so: any) => (
+              <p key={so.id} className="py-2 border-b border-slate-100">SO: <span className="font-bold">{so.soNumber}</span> - Customer: {so.customer?.name}</p>
+            ))}
+          </div>
+        )}
+
+        {data.notes && (
+          <div className="mb-16">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Notes</h3>
+            <p className="text-slate-700 whitespace-pre-wrap">{data.notes}</p>
+          </div>
+        )}
 
         {renderSignatures()}
       </div>

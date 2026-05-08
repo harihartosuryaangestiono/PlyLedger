@@ -23,6 +23,10 @@ export async function getShipments() {
 
   try {
     return await prisma.shipment.findMany({
+      include: {
+        customer: { select: { name: true } },
+        items: { include: { product: true } }
+      },
       orderBy: { createdAt: "desc" },
     });
   } catch (error) {
@@ -180,12 +184,29 @@ export async function deleteShipmentPodFile(shipmentId: string, fileName: string
 }
 
 export async function createShipment(data: {
+  // Delivery Order
+  doNumber?: string;
+  deliveryDate?: string;
+  customerId?: string;
+  destinationAddress?: string;
+  customerPic?: string;
+  phoneNumber?: string;
+  warehouseOrigin?: string;
+  driverName?: string;
+  vehiclePlate?: string;
+  expeditionCompany?: string;
+  sealNumber?: string;
+  notes?: string;
+
+  // Shipment
   containerNumber: string;
   billOfLading: string;
   originPort: string;
   destinationPort: string;
   etd: string;
   eta: string;
+  
+  items?: { productId: string; quantity: number; unit: string; notes?: string }[];
 }) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";
@@ -196,12 +217,34 @@ export async function createShipment(data: {
   try {
     await prisma.shipment.create({
       data: {
+        doNumber: data.doNumber,
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
+        customerId: data.customerId,
+        destinationAddress: data.destinationAddress,
+        customerPic: data.customerPic,
+        phoneNumber: data.phoneNumber,
+        warehouseOrigin: data.warehouseOrigin,
+        driverName: data.driverName,
+        vehiclePlate: data.vehiclePlate,
+        expeditionCompany: data.expeditionCompany,
+        sealNumber: data.sealNumber,
+        notes: data.notes,
+
         containerNumber: data.containerNumber,
         billOfLading: data.billOfLading,
         originPort: data.originPort,
         destinationPort: data.destinationPort,
         etd: data.etd ? new Date(data.etd) : null,
         eta: data.eta ? new Date(data.eta) : null,
+
+        items: data.items && data.items.length > 0 ? {
+          create: data.items.map(i => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unit: i.unit,
+            notes: i.notes
+          }))
+        } : undefined
       }
     });
     
@@ -216,6 +259,21 @@ export async function createShipment(data: {
 export async function updateShipment(
   id: string,
   data: {
+    // Delivery Order
+    doNumber?: string | null;
+    deliveryDate?: string | null;
+    customerId?: string | null;
+    destinationAddress?: string | null;
+    customerPic?: string | null;
+    phoneNumber?: string | null;
+    warehouseOrigin?: string | null;
+    driverName?: string | null;
+    vehiclePlate?: string | null;
+    expeditionCompany?: string | null;
+    sealNumber?: string | null;
+    notes?: string | null;
+
+    // Shipment
     containerNumber: string | null;
     billOfLading: string | null;
     originPort: string | null;
@@ -223,6 +281,8 @@ export async function updateShipment(
     etd: string | null;
     eta: string | null;
     status: string;
+
+    items?: { productId: string; quantity: number; unit: string; notes?: string }[];
   }
 ) {
   const session = await auth();
@@ -235,6 +295,19 @@ export async function updateShipment(
     await prisma.shipment.update({
       where: { id },
       data: {
+        doNumber: data.doNumber,
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
+        customerId: data.customerId,
+        destinationAddress: data.destinationAddress,
+        customerPic: data.customerPic,
+        phoneNumber: data.phoneNumber,
+        warehouseOrigin: data.warehouseOrigin,
+        driverName: data.driverName,
+        vehiclePlate: data.vehiclePlate,
+        expeditionCompany: data.expeditionCompany,
+        sealNumber: data.sealNumber,
+        notes: data.notes,
+
         containerNumber: data.containerNumber,
         billOfLading: data.billOfLading,
         originPort: data.originPort,
@@ -242,6 +315,16 @@ export async function updateShipment(
         etd: data.etd ? new Date(data.etd) : null,
         eta: data.eta ? new Date(data.eta) : null,
         status: data.status as any,
+
+        items: data.items ? {
+          deleteMany: {},
+          create: data.items.map(i => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unit: i.unit,
+            notes: i.notes
+          }))
+        } : undefined
       },
     });
 

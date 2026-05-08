@@ -22,6 +22,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
 
   const [editOrder, setEditOrder] = useState<any>(null);
   const [editStatus, setEditStatus] = useState<string>("DRAFT");
+  const [editShippingAddress, setEditShippingAddress] = useState<string>("");
 
   const [items, setItems] = useState([{ productId: "", pallets: "", quantity: 1, unitPrice: 0 }]);
   const [supplierId, setSupplierId] = useState("");
@@ -112,6 +113,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     await createPurchaseOrder({
       poNumber: formData.get("poNumber") as string,
       supplierId: supplierId,
+      shippingAddress: formData.get("shippingAddress") as string,
       currency: formData.get("currency") as string,
       subTotal,
       hasTax,
@@ -145,6 +147,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   function startEdit(order: any) {
     setEditOrder(order);
     setEditStatus(order.status || "DRAFT");
+    setEditShippingAddress(order.shippingAddress || "");
     setEditOpen(true);
   }
 
@@ -153,7 +156,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     if (!editOrder) return;
 
     setEditLoading(true);
-    const result = await updatePurchaseOrderStatus(editOrder.id, editStatus);
+    const result = await updatePurchaseOrderStatus(editOrder.id, editStatus, editShippingAddress);
     setEditLoading(false);
 
     if (result.success) {
@@ -260,6 +263,10 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="shippingAddress">Shipping Address</Label>
+                        <Input id="shippingAddress" name="shippingAddress" placeholder="Optional shipping address..." />
                       </div>
                       <div className="space-y-2 hidden">
                         <Label htmlFor="currency">Currency</Label>
@@ -398,6 +405,15 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                           <SelectItem value="CANCELLED">CANCELLED</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editShippingAddress">Shipping Address</Label>
+                      <Input
+                        id="editShippingAddress"
+                        value={editShippingAddress}
+                        onChange={(e) => setEditShippingAddress(e.target.value)}
+                        placeholder="Optional shipping address..."
+                      />
                     </div>
                     <div className="flex justify-end pt-2">
                       <Button type="submit" disabled={editLoading || !editOrder} className="w-full sm:w-32">

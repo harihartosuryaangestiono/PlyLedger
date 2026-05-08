@@ -57,6 +57,7 @@ export async function getProductsForSelect() {
 export async function createPurchaseOrder(data: {
   poNumber: string;
   supplierId: string;
+  shippingAddress?: string;
   currency: string;
   subTotal: number;
   hasTax: boolean;
@@ -75,6 +76,7 @@ export async function createPurchaseOrder(data: {
       data: {
         poNumber: data.poNumber,
         supplierId: data.supplierId,
+        shippingAddress: data.shippingAddress,
         currency: data.currency,
         subTotal: data.subTotal,
         hasTax: data.hasTax,
@@ -113,7 +115,7 @@ export async function createPurchaseOrder(data: {
   }
 }
 
-export async function updatePurchaseOrderStatus(id: string, status: string) {
+export async function updatePurchaseOrderStatus(id: string, status: string, shippingAddress?: string | null) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";
   if (!canEdit(role, "purchases")) {
@@ -123,7 +125,10 @@ export async function updatePurchaseOrderStatus(id: string, status: string) {
   try {
     await prisma.purchaseOrder.update({
       where: { id },
-      data: { status: status as any },
+      data: { 
+        status: status as any,
+        ...(shippingAddress !== undefined && { shippingAddress })
+      },
     });
 
     revalidatePath("/purchases");

@@ -59,6 +59,20 @@ import {
 
 type Shipment = {
   id: string;
+  doNumber?: string | null;
+  deliveryDate?: string | Date | null;
+  customerId?: string | null;
+  customer?: { name: string } | null;
+  destinationAddress?: string | null;
+  customerPic?: string | null;
+  phoneNumber?: string | null;
+  warehouseOrigin?: string | null;
+  driverName?: string | null;
+  vehiclePlate?: string | null;
+  expeditionCompany?: string | null;
+  sealNumber?: string | null;
+  notes?: string | null;
+
   containerNumber: string | null;
   billOfLading: string;
   originPort: string;
@@ -66,6 +80,8 @@ type Shipment = {
   etd: string | Date | null;
   eta: string | Date | null;
   status: string;
+
+  items?: { productId: string; product: { name: string; thickness: string; size: string; grade: string }; quantity: number; unit: string; notes: string | null }[];
 };
 
 type ShipmentFormOptions = {
@@ -166,6 +182,19 @@ export function ShipmentClient({
   const [podUploads, setPodUploads] = useState<Record<string, ShipmentPodFile[]>>(initialPodFiles || {});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [doEditForm, setDoEditForm] = useState({
+    doNumber: "",
+    deliveryDate: "",
+    customerId: "",
+    destinationAddress: "",
+    customerPic: "",
+    phoneNumber: "",
+    warehouseOrigin: "",
+    driverName: "",
+    vehiclePlate: "",
+    expeditionCompany: "",
+    sealNumber: "",
+    notes: "",
+
     containerNumber: "",
     billOfLading: "",
     originPort: "",
@@ -262,13 +291,13 @@ export function ShipmentClient({
                   : "Draft";
       return {
         id: s.id,
-        doNumber: `DO-${new Date().getFullYear()}-${String(idx + 1).padStart(4, "0")}`,
-        customer: "-",
-        destination: s.destinationPort || "-",
-        driver: "-",
-        vehiclePlate: "-",
-        totalItems: "-",
-        deliveryDate: s.eta,
+        doNumber: s.doNumber || `DO-${new Date().getFullYear()}-${String(idx + 1).padStart(4, "0")}`,
+        customer: s.customer?.name || s.customerPic || "-",
+        destination: s.destinationAddress || s.destinationPort || "-",
+        driver: s.driverName || "-",
+        vehiclePlate: s.vehiclePlate || "-",
+        totalItems: s.items?.length || "-",
+        deliveryDate: s.deliveryDate || s.eta,
         status: doStatus,
       };
     });
@@ -406,12 +435,32 @@ export function ShipmentClient({
     }
     setSavingShipment(true);
     const result = await createShipment({
+      doNumber: doForm.doNumber,
+      deliveryDate: doForm.deliveryDate,
+      customerId: selectedCustomerId || undefined,
+      destinationAddress: doForm.destinationAddress,
+      customerPic: doForm.customerPic,
+      phoneNumber: doForm.phoneNumber,
+      warehouseOrigin: doForm.warehouseOrigin,
+      driverName: doForm.driverName,
+      vehiclePlate: doForm.vehiclePlate,
+      expeditionCompany: doForm.expeditionCompany,
+      sealNumber: doForm.sealNumber,
+      notes: doForm.notes,
+
       containerNumber: doForm.containerNumber,
-      billOfLading: `${doForm.doNumber}-BL`,
+      billOfLading: doForm.containerNumber ? `${doForm.containerNumber}-BL` : `${doForm.doNumber}-BL`,
       originPort: doForm.warehouseOrigin,
       destinationPort: doForm.destinationAddress,
       etd: doForm.etd,
       eta: doForm.eta,
+
+      items: doItems.filter(item => item.productId && Number(item.quantity) > 0).map(item => ({
+        productId: item.productId,
+        quantity: Number(item.quantity),
+        unit: item.unit,
+        notes: item.notes
+      }))
     });
     setSavingShipment(false);
     if (result.success) {
@@ -499,6 +548,19 @@ export function ShipmentClient({
     }
     setSelectedShipment(shipment);
     setDoEditForm({
+      doNumber: shipment.doNumber || "",
+      deliveryDate: toDateInput(shipment.deliveryDate),
+      customerId: shipment.customerId || "",
+      destinationAddress: shipment.destinationAddress || "",
+      customerPic: shipment.customerPic || "",
+      phoneNumber: shipment.phoneNumber || "",
+      warehouseOrigin: shipment.warehouseOrigin || "",
+      driverName: shipment.driverName || "",
+      vehiclePlate: shipment.vehiclePlate || "",
+      expeditionCompany: shipment.expeditionCompany || "",
+      sealNumber: shipment.sealNumber || "",
+      notes: shipment.notes || "",
+
       containerNumber: shipment.containerNumber || "",
       billOfLading: shipment.billOfLading || "",
       originPort: shipment.originPort || "",
@@ -507,6 +569,23 @@ export function ShipmentClient({
       eta: toDateInput(shipment.eta),
       status: shipment.status || "PENDING",
     });
+
+    if (shipment.items && shipment.items.length > 0) {
+      setDoItems(shipment.items.map(item => ({
+        productId: item.productId,
+        product: item.product.name,
+        thickness: item.product.thickness,
+        size: item.product.size,
+        grade: item.product.grade,
+        quantity: item.quantity,
+        unit: item.unit,
+        notes: item.notes || ""
+      })));
+    } else {
+      setDoItems([{ productId: "", product: "", thickness: "", size: "", grade: "", quantity: 0, unit: "Sheets", notes: "" }]);
+    }
+    
+    setSelectedCustomerId(shipment.customerId || "");
     setOpenDoEdit(true);
   }
 
@@ -514,6 +593,19 @@ export function ShipmentClient({
     if (!selectedShipment) return;
     setSavingDoEdit(true);
     const result = await updateShipment(selectedShipment.id, {
+      doNumber: doEditForm.doNumber || null,
+      deliveryDate: doEditForm.deliveryDate || null,
+      customerId: selectedCustomerId || null,
+      destinationAddress: doEditForm.destinationAddress || null,
+      customerPic: doEditForm.customerPic || null,
+      phoneNumber: doEditForm.phoneNumber || null,
+      warehouseOrigin: doEditForm.warehouseOrigin || null,
+      driverName: doEditForm.driverName || null,
+      vehiclePlate: doEditForm.vehiclePlate || null,
+      expeditionCompany: doEditForm.expeditionCompany || null,
+      sealNumber: doEditForm.sealNumber || null,
+      notes: doEditForm.notes || null,
+
       containerNumber: doEditForm.containerNumber || null,
       billOfLading: doEditForm.billOfLading || null,
       originPort: doEditForm.originPort || null,
@@ -521,6 +613,13 @@ export function ShipmentClient({
       etd: doEditForm.etd || null,
       eta: doEditForm.eta || null,
       status: doEditForm.status,
+
+      items: doItems.filter(item => item.productId && Number(item.quantity) > 0).map(item => ({
+        productId: item.productId,
+        quantity: Number(item.quantity),
+        unit: item.unit,
+        notes: item.notes
+      }))
     });
     setSavingDoEdit(false);
     if (result.success) {

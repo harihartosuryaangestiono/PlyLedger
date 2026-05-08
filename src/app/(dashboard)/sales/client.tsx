@@ -22,6 +22,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
 
   const [editOrder, setEditOrder] = useState<any>(null);
   const [editStatus, setEditStatus] = useState<string>("DRAFT");
+  const [editShippingAddress, setEditShippingAddress] = useState<string>("");
 
   const [items, setItems] = useState([{ productId: "", pallets: "", quantity: 1, sellingPrice: 0, unit: "pcs" }]);
   const [customerId, setCustomerId] = useState("");
@@ -114,6 +115,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
     await createSalesOrder({
       soNumber: formData.get("soNumber") as string,
       customerId: customerId,
+      shippingAddress: formData.get("shippingAddress") as string,
       currency: formData.get("currency") as string,
       paymentTerms: paymentTerms as any,
       subTotal,
@@ -149,6 +151,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
   function startEdit(order: any) {
     setEditOrder(order);
     setEditStatus(order.status || "DRAFT");
+    setEditShippingAddress(order.shippingAddress || "");
     setEditOpen(true);
   }
 
@@ -157,7 +160,7 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
     if (!editOrder) return;
 
     setEditLoading(true);
-    const result = await updateSalesOrderStatus(editOrder.id, editStatus);
+    const result = await updateSalesOrderStatus(editOrder.id, editStatus, editShippingAddress);
     setEditLoading(false);
 
     if (result.success) {
@@ -264,6 +267,10 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="shippingAddress">Shipping Address</Label>
+                        <Input id="shippingAddress" name="shippingAddress" placeholder="Optional shipping address..." />
                       </div>
                       <div className="space-y-2 hidden">
                         <Label htmlFor="currency">Currency</Label>
@@ -409,6 +416,15 @@ export function SalesClient({ initialOrders, customers, products , readOnly }: a
                           <SelectItem value="CANCELLED">CANCELLED</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editShippingAddress">Shipping Address</Label>
+                      <Input
+                        id="editShippingAddress"
+                        value={editShippingAddress}
+                        onChange={(e) => setEditShippingAddress(e.target.value)}
+                        placeholder="Optional shipping address..."
+                      />
                     </div>
                     <div className="flex justify-end pt-2">
                       <Button type="submit" disabled={editLoading || !editOrder} className="w-full sm:w-32">

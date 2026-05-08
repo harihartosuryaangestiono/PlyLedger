@@ -56,6 +56,7 @@ model Customer {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   salesOrders   SalesOrder[]
+  shipments     Shipment[]
 }
 
 model Product {
@@ -70,6 +71,7 @@ model Product {
   updatedAt     DateTime       @updatedAt
   purchaseItems PurchaseItem[]
   salesItems    SalesItem[]
+  shipmentItems ShipmentItem[]
 }
 
 // ==============================
@@ -81,6 +83,7 @@ model PurchaseOrder {
   poNumber           String           @unique
   supplierId         String
   supplier           Supplier         @relation(fields: [supplierId], references: [id])
+  shippingAddress    String?
   currency           String           @default("USD")
   exchangeRateId     String?
   exchangeRate       ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
@@ -131,6 +134,7 @@ model SalesOrder {
   soNumber        String           @unique
   customerId      String
   customer        Customer         @relation(fields: [customerId], references: [id])
+  shippingAddress String?
   currency        String           @default("USD")
   exchangeRateId  String?
   exchangeRate    ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
@@ -179,18 +183,49 @@ model SalesItem {
 // ==============================
 
 model Shipment {
-  id              String          @id @default(uuid())
-  containerNumber String?
-  billOfLading    String?
-  etd             DateTime?
-  eta             DateTime?
-  originPort      String?
-  destinationPort String?
-  status          ShipmentStatus  @default(PENDING)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  purchaseOrders  PurchaseOrder[] @relation("POShipments")
-  salesOrders     SalesOrder[]    @relation("SOShipments")
+  id                 String          @id @default(uuid())
+  
+  // Delivery Order Fields
+  doNumber           String?         @unique
+  deliveryDate       DateTime?
+  customerId         String?
+  customer           Customer?       @relation(fields: [customerId], references: [id])
+  destinationAddress String?
+  customerPic        String?
+  phoneNumber        String?
+  warehouseOrigin    String?
+  driverName         String?
+  vehiclePlate       String?
+  expeditionCompany  String?
+  sealNumber         String?
+  notes              String?
+
+  // Container Info
+  containerNumber    String?
+  billOfLading       String?
+  etd                DateTime?
+  eta                DateTime?
+  originPort         String?
+  destinationPort    String?
+  status             ShipmentStatus  @default(PENDING)
+  
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  
+  purchaseOrders     PurchaseOrder[] @relation("POShipments")
+  salesOrders        SalesOrder[]    @relation("SOShipments")
+  items              ShipmentItem[]
+}
+
+model ShipmentItem {
+  id          String   @id @default(uuid())
+  shipmentId  String
+  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Float
+  unit        String
+  notes       String?
 }
 
 enum ShipmentStatus {
