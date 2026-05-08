@@ -176,12 +176,17 @@ export default function PrintClient({ type, data }: { type: string, data: any })
     const isReceivable = data.type === "RECEIVABLE";
     const order = isReceivable ? data.salesOrder : data.purchaseOrder;
     const entity = isReceivable ? order?.customer : order?.supplier;
-    
+
+    const hasShippingAddress = order?.shippingAddress || order?.recipientName;
+
     return (
       <div className="bg-white text-slate-900 p-10 max-w-4xl mx-auto min-h-screen">
         {printStyles}
         {renderHeader("INVOICE", data.invoiceNumber, formatDate(data.createdAt))}
-        {renderEntity(isReceivable ? "Bill To" : "Pay To", entity)}
+        <div className="grid grid-cols-2 gap-8">
+          {renderEntity(isReceivable ? "Bill To" : "Pay To", entity)}
+          {hasShippingAddress && renderEntity("Shipping Address", { name: order?.recipientName || "Deliver To", address: order?.shippingAddress }, undefined, true)}
+        </div>
         {order?.items && renderItems(order.items)}
         {renderTotals(data.amount, 0, data.amount, false)}
         {renderSignatures()}
@@ -194,13 +199,15 @@ export default function PrintClient({ type, data }: { type: string, data: any })
     const taxAmount = Number(data?.taxAmount ?? 0);
     const totalAmount = Number(data?.totalAmount ?? data?.totalCost ?? subTotal + taxAmount);
 
+    const hasShippingAddress = data.shippingAddress || data.recipientName;
+
     return (
       <div className="bg-white text-slate-900 p-10 max-w-4xl mx-auto min-h-screen">
         {printStyles}
         {renderHeader("PURCHASE ORDER", data.poNumber, formatDate(data.createdAt))}
         <div className="grid grid-cols-2 gap-8">
           {renderEntity("Supplier", data.supplier, undefined, true)}
-          {data.shippingAddress && renderEntity("Shipping Address", { name: "Deliver To", address: data.shippingAddress }, undefined, true)}
+          {hasShippingAddress && renderEntity("Shipping Address", { name: data.recipientName || "Deliver To", address: data.shippingAddress }, undefined, true)}
         </div>
         {data.items && renderItems(data.items)}
         {renderTotals(subTotal, taxAmount, totalAmount, Boolean(data?.hasTax))}
@@ -214,13 +221,15 @@ export default function PrintClient({ type, data }: { type: string, data: any })
     const taxAmount = Number(data?.taxAmount ?? 0);
     const totalAmount = Number(data?.totalAmount ?? subTotal + taxAmount);
 
+    const hasShippingAddress = data.shippingAddress || data.recipientName;
+
     return (
       <div className="bg-white text-slate-900 p-10 max-w-4xl mx-auto min-h-screen">
         {printStyles}
         {renderHeader("SALES ORDER", data.soNumber, formatDate(data.createdAt))}
         <div className="grid grid-cols-2 gap-8">
-          {renderEntity("Customer", data.customer, data.paymentTerms ? `Payment Terms: ${data.paymentTerms}` : undefined, true)}
-          {data.shippingAddress && renderEntity("Shipping Address", { name: "Deliver To", address: data.shippingAddress }, undefined, true)}
+          {renderEntity("Customer", data.customer, undefined, true)}
+          {hasShippingAddress && renderEntity("Shipping Address", { name: data.recipientName || "Deliver To", address: data.shippingAddress }, undefined, true)}
         </div>
         {data.items && renderItems(data.items)}
         {renderTotals(subTotal, taxAmount, totalAmount, Boolean(data?.hasTax))}

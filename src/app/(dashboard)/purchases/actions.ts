@@ -58,6 +58,7 @@ export async function createPurchaseOrder(data: {
   poNumber: string;
   supplierId: string;
   shippingAddress?: string;
+  recipientName?: string;
   currency: string;
   subTotal: number;
   hasTax: boolean;
@@ -77,6 +78,8 @@ export async function createPurchaseOrder(data: {
         poNumber: data.poNumber,
         supplierId: data.supplierId,
         shippingAddress: data.shippingAddress,
+        recipientName: data.recipientName,
+        recipientUpdatedAt: data.recipientName ? new Date() : null,
         currency: data.currency,
         subTotal: data.subTotal,
         hasTax: data.hasTax,
@@ -115,7 +118,7 @@ export async function createPurchaseOrder(data: {
   }
 }
 
-export async function updatePurchaseOrderStatus(id: string, status: string, shippingAddress?: string | null) {
+export async function updatePurchaseOrderStatus(id: string, status: string, shippingAddress?: string | null, recipientName?: string | null) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";
   if (!canEdit(role, "purchases")) {
@@ -127,7 +130,9 @@ export async function updatePurchaseOrderStatus(id: string, status: string, ship
       where: { id },
       data: { 
         status: status as any,
-        ...(shippingAddress !== undefined && { shippingAddress })
+        ...(shippingAddress !== undefined && { shippingAddress }),
+        ...(recipientName !== undefined && { recipientName }),
+        ...(recipientName !== undefined && recipientName !== null && { recipientUpdatedAt: new Date() })
       },
     });
 

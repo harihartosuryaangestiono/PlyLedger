@@ -84,6 +84,8 @@ model PurchaseOrder {
   supplierId         String
   supplier           Supplier         @relation(fields: [supplierId], references: [id])
   shippingAddress    String?
+  recipientName      String?
+  recipientUpdatedAt DateTime?
   currency           String           @default("USD")
   exchangeRateId     String?
   exchangeRate       ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])
@@ -135,6 +137,8 @@ model SalesOrder {
   customerId      String
   customer        Customer         @relation(fields: [customerId], references: [id])
   shippingAddress String?
+  recipientName   String?
+  recipientUpdatedAt DateTime?
   currency        String           @default("USD")
   exchangeRateId  String?
   exchangeRate    ExchangeRateSnapshot? @relation(fields: [exchangeRateId], references: [id])

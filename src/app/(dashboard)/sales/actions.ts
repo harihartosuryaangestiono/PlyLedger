@@ -58,6 +58,7 @@ export async function createSalesOrder(data: {
   soNumber: string;
   customerId: string;
   shippingAddress?: string;
+  recipientName?: string;
   currency: string;
   paymentTerms: "CASH" | "INSTALLMENT" | "LC";
   subTotal: number;
@@ -78,6 +79,8 @@ export async function createSalesOrder(data: {
         soNumber: data.soNumber,
         customerId: data.customerId,
         shippingAddress: data.shippingAddress,
+        recipientName: data.recipientName,
+        recipientUpdatedAt: data.recipientName ? new Date() : null,
         currency: data.currency,
         paymentTerms: data.paymentTerms,
         subTotal: data.subTotal,
@@ -117,7 +120,7 @@ export async function createSalesOrder(data: {
   }
 }
 
-export async function updateSalesOrderStatus(id: string, status: string, shippingAddress?: string | null) {
+export async function updateSalesOrderStatus(id: string, status: string, shippingAddress?: string | null, recipientName?: string | null) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";
   if (!canEdit(role, "sales")) {
@@ -129,7 +132,9 @@ export async function updateSalesOrderStatus(id: string, status: string, shippin
       where: { id },
       data: { 
         status: status as any,
-        ...(shippingAddress !== undefined && { shippingAddress })
+        ...(shippingAddress !== undefined && { shippingAddress }),
+        ...(recipientName !== undefined && { recipientName }),
+        ...(recipientName !== undefined && recipientName !== null && { recipientUpdatedAt: new Date() })
       },
     });
 

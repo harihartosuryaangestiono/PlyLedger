@@ -23,6 +23,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   const [editOrder, setEditOrder] = useState<any>(null);
   const [editStatus, setEditStatus] = useState<string>("DRAFT");
   const [editShippingAddress, setEditShippingAddress] = useState<string>("");
+  const [editRecipientName, setEditRecipientName] = useState<string>("");
 
   const [items, setItems] = useState([{ productId: "", pallets: "", quantity: 1, unitPrice: 0 }]);
   const [supplierId, setSupplierId] = useState("");
@@ -148,6 +149,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     setEditOrder(order);
     setEditStatus(order.status || "DRAFT");
     setEditShippingAddress(order.shippingAddress || "");
+    setEditRecipientName(order.recipientName || "");
     setEditOpen(true);
   }
 
@@ -156,7 +158,7 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     if (!editOrder) return;
 
     setEditLoading(true);
-    const result = await updatePurchaseOrderStatus(editOrder.id, editStatus, editShippingAddress);
+    const result = await updatePurchaseOrderStatus(editOrder.id, editStatus, editShippingAddress, editRecipientName);
     setEditLoading(false);
 
     if (result.success) {
@@ -267,6 +269,10 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                       <div className="space-y-2 col-span-2">
                         <Label htmlFor="shippingAddress">Shipping Address</Label>
                         <Input id="shippingAddress" name="shippingAddress" placeholder="Optional shipping address..." />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="recipientName">Nama Penerima (Recipient Name)</Label>
+                        <Input id="recipientName" name="recipientName" placeholder="Optional recipient name..." />
                       </div>
                       <div className="space-y-2 hidden">
                         <Label htmlFor="currency">Currency</Label>
@@ -414,6 +420,20 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                         onChange={(e) => setEditShippingAddress(e.target.value)}
                         placeholder="Optional shipping address..."
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editRecipientName">Nama Penerima (Recipient Name)</Label>
+                      <Input
+                        id="editRecipientName"
+                        value={editRecipientName}
+                        onChange={(e) => setEditRecipientName(e.target.value)}
+                        placeholder="Optional recipient name..."
+                      />
+                      {editOrder?.recipientUpdatedAt && (
+                        <p className="text-xs text-slate-500">
+                          Updated: {new Date(editOrder.recipientUpdatedAt).toLocaleString("id-ID")}
+                        </p>
+                      )}
                     </div>
                     <div className="flex justify-end pt-2">
                       <Button type="submit" disabled={editLoading || !editOrder} className="w-full sm:w-32">
