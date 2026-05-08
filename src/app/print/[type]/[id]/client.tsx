@@ -80,36 +80,36 @@ export default function PrintClient({ type, data }: { type: string, data: any })
         <col className="w-[7%]" />
         <col className="w-[35%]" />
         <col className="w-[12%]" />
-        <col className="w-[12%]" />
+        <col className="w-[14%]" />
         <col className="w-[16%]" />
-        <col className="w-[18%]" />
+        <col className="w-[16%]" />
       </colgroup>
       <thead>
         <tr className="border-b-2 border-slate-900">
           <th className="py-3 w-10 font-bold text-slate-900">No</th>
           <th className="py-3 font-bold text-slate-900">Description</th>
-          <th className="py-3 text-right font-bold text-slate-900">Pallet</th>
-          <th className="py-3 text-right font-bold text-slate-900">Qty</th>
-          <th className="py-3 text-right font-bold text-slate-900">Unit Price</th>
-          <th className="py-3 text-right font-bold text-slate-900">Total</th>
+          <th className="py-3 pr-8 text-right font-bold text-slate-900">Pallet</th>
+          <th className="py-3 pr-8 text-right font-bold text-slate-900">Qty</th>
+          <th className="py-3 pr-4 text-right font-bold text-slate-900">Unit Price</th>
+          <th className="py-3 pr-2 text-right font-bold text-slate-900">Total</th>
         </tr>
       </thead>
       <tbody>
         {items.map((item: any, i: number) => (
           <tr key={i} className="border-b border-slate-200">
             <td className="py-3 pr-2 text-slate-600 align-top">{i + 1}</td>
-            <td className="py-4">
+            <td className="py-4 pr-4">
               <p className="font-semibold text-slate-900 leading-snug">{item.product.name}</p>
               <p className="text-sm text-slate-500">
                 {[item.product.type, item.product.grade, item.product.thickness, item.product.size].filter(Boolean).join(" • ")}
               </p>
             </td>
-            <td className="py-4 text-right align-top whitespace-nowrap">{item.pallets ?? "-"}</td>
-            <td className="py-4 text-right align-top whitespace-nowrap">
+            <td className="py-4 pr-8 text-right align-top whitespace-nowrap">{item.pallets ?? "-"}</td>
+            <td className="py-4 pr-8 text-right align-top whitespace-nowrap">
               {Number(item.quantity || 0).toLocaleString("id-ID")} {item.unit || "pcs"}
             </td>
-            <td className="py-4 pl-3 text-right align-top whitespace-nowrap">{formatMoney(getItemUnitPrice(item))}</td>
-            <td className="py-4 pl-3 text-right align-top whitespace-nowrap font-semibold">{formatMoney(getItemTotalPrice(item))}</td>
+            <td className="py-4 pr-4 text-right align-top whitespace-nowrap">{formatMoney(getItemUnitPrice(item))}</td>
+            <td className="py-4 pr-2 text-right align-top whitespace-nowrap font-semibold">{formatMoney(getItemTotalPrice(item))}</td>
           </tr>
         ))}
       </tbody>
