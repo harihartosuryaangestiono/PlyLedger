@@ -145,6 +145,68 @@ export async function updateSalesOrderStatus(id: string, status: string, shippin
   }
 }
 
+export async function updateSalesOrderItems(
+  id: string,
+  status: string,
+  shippingAddress: string | null,
+  recipientName: string | null,
+  items: { id: string; pallets?: number | null; quantity: number; sellingPrice: number; totalPrice: number }[],
+  hasTax: boolean
+) {
+  const session = await auth();
+  const role = session?.user?.role || "VIEWER";
+  if (!canEdit(role, "sales")) {
+    throw new Error("Unauthorized: You do not have permission to perform this action.");
+  }
+
+  try {
+    const subTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    const taxAmount = hasTax ? subTotal * 0.11 : 0;
+    const totalAmount = subTotal + taxAmount;
+
+    await prisma.$transaction(async (tx) => {
+      // Update each item
+      for (const item of items) {
+        await tx.salesItem.update({
+          where: { id: item.id },
+          data: {
+            pallets: item.pallets ?? null,
+            quantity: item.quantity,
+            sellingPrice: item.sellingPrice,
+            totalPrice: item.totalPrice,
+          },
+        });
+      }
+
+      // Update order totals and status
+      await tx.salesOrder.update({
+        where: { id },
+        data: {
+          status: status as any,
+          ...(shippingAddress !== null && { shippingAddress }),
+          ...(recipientName !== null && { recipientName, recipientUpdatedAt: new Date() }),
+          subTotal,
+          hasTax,
+          taxAmount,
+          totalAmount,
+        },
+      });
+
+      // Sync invoice amount
+      await tx.invoice.updateMany({
+        where: { salesOrderId: id },
+        data: { amount: totalAmount },
+      });
+    });
+
+    revalidatePath("/sales");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update sales order items:", error);
+    return { success: false, error: "Failed to update sales order items" };
+  }
+}
+
 export async function deleteSalesOrder(id: string) {
   const session = await auth();
   const role = session?.user?.role || "VIEWER";

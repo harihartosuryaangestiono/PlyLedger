@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { createPurchaseOrder, deletePurchaseOrder, updatePurchaseOrderStatus } from "./actions";
+import { createPurchaseOrder, deletePurchaseOrder, updatePurchaseOrderItems } from "./actions";
 import { Edit2, Plus, Printer, Download, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 
@@ -24,6 +24,8 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
   const [editStatus, setEditStatus] = useState<string>("DRAFT");
   const [editShippingAddress, setEditShippingAddress] = useState<string>("");
   const [editRecipientName, setEditRecipientName] = useState<string>("");
+  const [editItems, setEditItems] = useState<{ id: string; productName: string; pallets: string; quantity: number; unitPrice: number }[]>([]);
+  const [editHasTax, setEditHasTax] = useState(false);
 
   const [items, setItems] = useState([{ productId: "", pallets: "", quantity: 1, unitPrice: 0 }]);
   const [supplierId, setSupplierId] = useState("");
@@ -150,7 +152,28 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     setEditStatus(order.status || "DRAFT");
     setEditShippingAddress(order.shippingAddress || "");
     setEditRecipientName(order.recipientName || "");
+    setEditHasTax(order.hasTax || false);
+    setEditItems(
+      (order.items || []).map((item: any) => ({
+        id: item.id,
+        productName: item.product
+          ? [item.product.type, item.product.thickness, item.product.size].filter(Boolean).join(" ") ||
+            item.product.name
+          : "—",
+        pallets: item.pallets != null ? String(item.pallets) : "",
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }))
+    );
     setEditOpen(true);
+  }
+
+  function updateEditItem(index: number, field: string, value: any) {
+    setEditItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
   }
 
   async function onEditSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -158,7 +181,20 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
     if (!editOrder) return;
 
     setEditLoading(true);
-    const result = await updatePurchaseOrderStatus(editOrder.id, editStatus, editShippingAddress, editRecipientName);
+    const result = await updatePurchaseOrderItems(
+      editOrder.id,
+      editStatus,
+      editShippingAddress || null,
+      editRecipientName || null,
+      editItems.map((item) => ({
+        id: item.id,
+        pallets: item.pallets !== "" ? Number(item.pallets) : null,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.quantity) * Number(item.unitPrice),
+      })),
+      editHasTax
+    );
     setEditLoading(false);
 
     if (result.success) {
@@ -392,50 +428,150 @@ export function PurchaseClient({ initialOrders, suppliers, products , readOnly }
                   if (!v) setEditOrder(null);
                 }}
               >
-                <DialogContent className="sm:max-w-md w-full">
+                <DialogContent className="sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Edit Purchase Order Status</DialogTitle>
+                    <DialogTitle>Edit Purchase Order</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={onEditSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Status</Label>
-                      <Select value={editStatus} onValueChange={(v) => setEditStatus(v || "DRAFT")}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="DRAFT">DRAFT</SelectItem>
-                          <SelectItem value="CONFIRMED">CONFIRMED</SelectItem>
-                          <SelectItem value="SHIPPED">SHIPPED</SelectItem>
-                          <SelectItem value="COMPLETED">COMPLETED</SelectItem>
-                          <SelectItem value="CANCELLED">CANCELLED</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <form onSubmit={onEditSubmit} className="space-y-5">
+                    {/* Status & address */}
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+                      <h3 className="font-medium text-sm text-slate-700">General</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <Select value={editStatus} onValueChange={(v) => setEditStatus(v || "DRAFT")}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="DRAFT">DRAFT</SelectItem>
+                              <SelectItem value="CONFIRMED">CONFIRMED</SelectItem>
+                              <SelectItem value="SHIPPED">SHIPPED</SelectItem>
+                              <SelectItem value="COMPLETED">COMPLETED</SelectItem>
+                              <SelectItem value="CANCELLED">CANCELLED</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="editShippingAddress">Shipping Address</Label>
+                          <Input
+                            id="editShippingAddress"
+                            value={editShippingAddress}
+                            onChange={(e) => setEditShippingAddress(e.target.value)}
+                            placeholder="Optional..."
+                          />
+                        </div>
+                        <div className="space-y-2 col-span-2">
+                          <Label htmlFor="editRecipientName">Nama Penerima</Label>
+                          <Input
+                            id="editRecipientName"
+                            value={editRecipientName}
+                            onChange={(e) => setEditRecipientName(e.target.value)}
+                            placeholder="Optional recipient name..."
+                          />
+                          {editOrder?.recipientUpdatedAt && (
+                            <p className="text-xs text-slate-500">
+                              Updated: {new Date(editOrder.recipientUpdatedAt).toLocaleString("id-ID")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editShippingAddress">Shipping Address</Label>
-                      <Input
-                        id="editShippingAddress"
-                        value={editShippingAddress}
-                        onChange={(e) => setEditShippingAddress(e.target.value)}
-                        placeholder="Optional shipping address..."
-                      />
+
+                    {/* Items */}
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-3">
+                      <h3 className="font-medium text-sm text-slate-700">Items</h3>
+                      <div className="grid grid-cols-[1fr_80px_72px_130px_130px] gap-2 px-2 mb-1">
+                        <div className="text-xs font-semibold text-slate-500 uppercase">Nama Barang</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pallet</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-center">Pcs</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Harga / Pcs</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase text-right">Jumlah</div>
+                      </div>
+                      {editItems.map((item, idx) => {
+                        const jumlah = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+                        return (
+                          <div key={item.id} className="grid grid-cols-[1fr_80px_72px_130px_130px] gap-2 items-center bg-white p-2 border rounded-md">
+                            <div className="text-sm text-slate-700 truncate px-1" title={item.productName}>{item.productName}</div>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="0"
+                              value={item.pallets}
+                              onChange={(e) => updateEditItem(idx, "pallets", e.target.value)}
+                              className={numberInputClass}
+                            />
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="0"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateEditItem(idx, "quantity", e.target.value)}
+                              className={numberInputClass}
+                              required
+                            />
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              placeholder="0"
+                              min="0"
+                              value={item.unitPrice}
+                              onChange={(e) => updateEditItem(idx, "unitPrice", e.target.value)}
+                              className={moneyInputClass}
+                              required
+                            />
+                            <div className="text-right px-3 text-sm font-medium text-slate-700 bg-slate-50 border rounded-md h-9 flex items-center justify-end">
+                              {jumlah.toLocaleString("id-ID")}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Totals */}
+                      <div className="pt-3 border-t border-slate-200 space-y-2">
+                        <div className="flex justify-end items-center gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={editHasTax}
+                              onChange={(e) => setEditHasTax(e.target.checked)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            Include PPN (11%)
+                          </label>
+                        </div>
+                        <div className="flex justify-end">
+                          <div className="w-64 space-y-2 text-right">
+                            {(() => {
+                              const sub = editItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
+                              const tax = editHasTax ? sub * 0.11 : 0;
+                              const grand = sub + tax;
+                              return (
+                                <>
+                                  <div className="flex justify-between text-sm text-slate-500">
+                                    <span>Subtotal:</span>
+                                    <span>Rp {sub.toLocaleString("id-ID")}</span>
+                                  </div>
+                                  {editHasTax && (
+                                    <div className="flex justify-between text-sm text-slate-500">
+                                      <span>PPN (11%):</span>
+                                      <span>Rp {tax.toLocaleString("id-ID")}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between text-lg font-bold text-slate-900 border-t pt-2">
+                                    <span>Grand Total:</span>
+                                    <span>Rp {grand.toLocaleString("id-ID")}</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editRecipientName">Nama Penerima (Recipient Name)</Label>
-                      <Input
-                        id="editRecipientName"
-                        value={editRecipientName}
-                        onChange={(e) => setEditRecipientName(e.target.value)}
-                        placeholder="Optional recipient name..."
-                      />
-                      {editOrder?.recipientUpdatedAt && (
-                        <p className="text-xs text-slate-500">
-                          Updated: {new Date(editOrder.recipientUpdatedAt).toLocaleString("id-ID")}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex justify-end pt-2">
+
+                    <div className="flex justify-end pt-1">
                       <Button type="submit" disabled={editLoading || !editOrder} className="w-full sm:w-32">
                         {editLoading ? "Saving..." : "Save"}
                       </Button>
